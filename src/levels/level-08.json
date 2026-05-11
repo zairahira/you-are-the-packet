@@ -1,0 +1,98 @@
+{
+  "id": 8,
+  "title": "The Disguise",
+  "concept": "nat",
+  "theory": {
+    "title": "NAT: One Address for Many",
+    "bodyParagraphs": [
+      {
+        "heading": "Why private IPs exist",
+        "text": "IPv4 has about 4 billion addresses - not enough for every device on earth. RFC 1918 set aside three ranges (10.x.x.x, 172.16-31.x.x, 192.168.x.x) for private use. Every home router, office, and data centre can use these freely - they just cannot appear on the public internet."
+      },
+      {
+        "heading": "What NAT does",
+        "text": "A NAT gateway sits at the boundary between private and public. When your packet crosses it, the gateway replaces your private source IP with its own public IP. Return traffic comes back to the gateway, which translates it back and forwards it to you."
+      },
+      {
+        "heading": "The trade-off",
+        "text": "NAT stretches the IPv4 address space dramatically - millions of devices can share one public IP. The cost is complexity: the gateway must track every active connection and the internet cannot directly initiate connections to devices behind NAT."
+      }
+    ],
+    "mission": "Your source IP is 192.168.1.5 - private and unroutable on the internet. Cross the NAT gateway to get a public IP, then route to 8.8.8.1. Watch your source IP change in the top bar as you pass through."
+  },
+  "gridWidth": 10,
+  "gridHeight": 8,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "192.168.1.5",
+    "destIP": "8.8.8.1",
+    "portTag": null,
+    "domainName": null
+  },
+  "destination": { "nodeId": "node-dest", "label": "8.8.8.1" },
+  "nodes": [
+    { "id": "node-spawn", "type": "spawn",       "col": 1, "row": 4 },
+    {
+      "id": "node-r1",    "type": "router",      "col": 3, "row": 4,
+      "label": "R1", "checkpoint": true,
+      "routingTable": [
+        { "prefix": "8.0.0.0/8",   "nextHop": "node-nat",   "interface": "eth0" },
+        { "prefix": "10.0.0.0/8",  "nextHop": "node-wrong", "interface": "eth1" }
+      ]
+    },
+    { "id": "node-wrong", "type": "exit",        "col": 3, "row": 2, "label": "Private LAN" },
+    {
+      "id": "node-nat",   "type": "nat-gateway", "col": 5, "row": 4,
+      "label": "NAT", "publicIP": "203.0.113.1"
+    },
+    {
+      "id": "node-r2",    "type": "router",      "col": 7, "row": 4,
+      "label": "R2", "checkpoint": true,
+      "routingTable": [
+        { "prefix": "8.0.0.0/8", "nextHop": "node-dest", "interface": "eth0" }
+      ]
+    },
+    { "id": "node-dest",  "type": "destination", "col": 9, "row": 4, "label": "8.8.8.1" }
+  ],
+  "edges": [
+    { "from": "node-spawn", "to": "node-r1",    "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-wrong", "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-nat",   "directed": false, "dropRate": 0 },
+    { "from": "node-nat",   "to": "node-r2",    "directed": false, "dropRate": 0 },
+    { "from": "node-r2",    "to": "node-dest",  "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",     "text": "YOU: 192.168.1.5", "attachToNode": "node-spawn", "offsetY": -40, "style": "ip-label"   },
+    { "id": "lbl-dest",    "text": "DEST: 8.8.8.1",    "attachToNode": "node-spawn", "offsetY": -58, "style": "ip-label"   },
+    { "id": "lbl-nat",     "text": "NAT GATEWAY",       "attachToNode": "node-nat",   "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-rewrite", "text": "-> 203.0.113.1",   "attachToNode": "node-nat",   "offsetY": -58, "style": "port-label" },
+    { "id": "lbl-pub",     "text": "8.8.8.1",           "attachToNode": "node-dest",  "offsetY": -40, "style": "ip-label"   }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "private-ip",
+      "triggerNode": "node-spawn",
+      "headline": "Private IP",
+      "body": "Addresses starting with 192.168, 10, or 172.16-31 are reserved for private networks (RFC 1918). They are free to reuse inside any home or office, but public internet routers will not forward them. You need NAT to reach the outside.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "nat",
+      "triggerNode": "node-nat",
+      "headline": "NAT - Network Address Translation",
+      "body": "The gateway swaps your private source IP for its own public IP before forwarding. From the internet's perspective, all traffic from your network comes from one address - the gateway's. Your original IP is hidden.",
+      "highlightNodeId": "node-nat"
+    },
+    {
+      "termKey": "public-ip",
+      "triggerNode": "node-dest",
+      "headline": "Public IP",
+      "body": "A globally unique address routable on the internet. After NAT, your packet appears to come from 203.0.113.1 - the gateway's public IP. The server at 8.8.8.1 never sees 192.168.1.5.",
+      "highlightNodeId": "node-dest"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination"
+}

@@ -1,0 +1,77 @@
+{
+  "id": 7,
+  "title": "Lost in Transit",
+  "concept": "packet-loss",
+  "theory": {
+    "title": "When Packets Get Lost",
+    "bodyParagraphs": [
+      {
+        "heading": "Networks drop packets",
+        "text": "IP makes no delivery guarantees. Routers drop packets when links are congested, faulty, or overloaded. A dropped packet simply disappears - no error, no notification. The sending application must detect the loss and retransmit."
+      },
+      {
+        "heading": "Drop rate",
+        "text": "Every link has a drop rate: the fraction of packets it discards. A link with a 100% drop rate drops every packet. Unstable links glow red on the canvas. Avoid them."
+      },
+      {
+        "heading": "Redundancy",
+        "text": "Real networks build multiple paths between the same endpoints. If one link fails, traffic reroutes automatically. This is why the internet keeps working even when parts of it break. Find the stable path and deliver your packet."
+      }
+    ],
+    "mission": "Two paths lead toward 10.0.2.50. One has a link that drops every packet. Find the redundant route and get through."
+  },
+  "gridWidth": 8,
+  "gridHeight": 8,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.0.1.5",
+    "destIP": "10.0.2.50",
+    "portTag": null,
+    "domainName": null
+  },
+  "destination": { "nodeId": "node-dest", "label": "10.0.2.50" },
+  "nodes": [
+    { "id": "node-spawn", "type": "spawn",       "col": 1, "row": 4 },
+    { "id": "node-chk",   "type": "exit",        "col": 3, "row": 4, "checkpoint": true },
+    { "id": "node-r-a",   "type": "exit",        "col": 3, "row": 2, "label": "STABLE" },
+    { "id": "node-mid-a", "type": "exit",        "col": 5, "row": 2 },
+    { "id": "node-dest",  "type": "destination", "col": 7, "row": 2 },
+    { "id": "node-r-b",   "type": "exit",        "col": 3, "row": 6, "label": "UNSTABLE?" },
+    { "id": "node-dead",  "type": "exit",        "col": 5, "row": 6, "label": "DROPPED" }
+  ],
+  "edges": [
+    { "from": "node-spawn", "to": "node-chk",   "directed": false, "dropRate": 0 },
+    { "from": "node-chk",   "to": "node-r-a",   "directed": false, "dropRate": 0 },
+    { "from": "node-chk",   "to": "node-r-b",   "directed": false, "dropRate": 0 },
+    { "from": "node-r-a",   "to": "node-mid-a", "directed": false, "dropRate": 0 },
+    { "from": "node-mid-a", "to": "node-dest",  "directed": false, "dropRate": 0 },
+    { "from": "node-r-b",   "to": "node-dead",  "directed": false, "dropRate": 1 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",    "text": "YOU: 10.0.1.5",  "attachToNode": "node-spawn", "offsetY": -40, "style": "ip-label"  },
+    { "id": "lbl-dest",   "text": "DEST: 10.0.2.50","attachToNode": "node-spawn", "offsetY": -58, "style": "ip-label"  },
+    { "id": "lbl-stable", "text": "STABLE",          "attachToNode": "node-r-a",   "offsetY": -40, "style": "cidr-label"},
+    { "id": "lbl-risky",  "text": "UNSTABLE?",       "attachToNode": "node-r-b",   "offsetY": -40, "style": "rule-text" },
+    { "id": "lbl-drop",   "text": "DROPPED",         "attachToNode": "node-dead",  "offsetY": -40, "style": "rule-text" }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "packet-loss",
+      "triggerNode": "node-r-b",
+      "headline": "Packet Loss",
+      "body": "Networks don't guarantee delivery. Some links are congested, faulty, or overloaded. If a link's drop rate is 100%, every packet crossing it is silently discarded. Look for another path.",
+      "highlightNodeId": "node-r-b"
+    },
+    {
+      "termKey": "redundancy",
+      "triggerNode": "node-dest",
+      "headline": "Redundancy",
+      "body": "Real networks build multiple paths between endpoints. If one link fails, traffic reroutes automatically. The stable path you just used is why the internet keeps working even when parts of it break.",
+      "highlightNodeId": "node-dest"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination"
+}

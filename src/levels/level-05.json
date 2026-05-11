@@ -1,0 +1,90 @@
+{
+  "id": 5,
+  "title": "Name Resolution",
+  "concept": "dns",
+  "theory": {
+    "title": "DNS: The Internet's Phone Book",
+    "bodyParagraphs": [
+      {
+        "heading": "Names vs addresses",
+        "text": "Humans remember names like web.fcc. Routers forward packets using IP addresses like 10.0.2.30. DNS (Domain Name System) bridges that gap by translating names to IPs."
+      },
+      {
+        "heading": "The A record",
+        "text": "A DNS A record maps one domain name to one IPv4 address. When your browser loads a website, the first thing it does is ask a DNS resolver for the A record of that domain. Only then does it know where to send the packet."
+      },
+      {
+        "heading": "What happens without DNS?",
+        "text": "Routers cannot forward traffic without a destination IP. If you skip the DNS resolver and head straight to R1, the routing table has nothing to match against. You must resolve the name first."
+      }
+    ],
+    "mission": "You know your destination by name - web.fcc - but not by IP. Find the DNS resolver and get the address. Once you have it, R1's routing table will know where to send you."
+  },
+  "gridWidth": 10,
+  "gridHeight": 8,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.0.1.5",
+    "destIP": null,
+    "portTag": null,
+    "domainName": "web.fcc"
+  },
+  "destination": { "nodeId": "node-dest", "label": "web.fcc" },
+  "nodes": [
+    { "id": "node-spawn", "type": "spawn",        "col": 1, "row": 4 },
+    { "id": "node-jct",   "type": "exit",         "col": 4, "row": 4 },
+    {
+      "id": "node-dns",   "type": "dns-resolver", "col": 4, "row": 2,
+      "checkpoint": true,
+      "dnsRecord": { "domain": "web.fcc", "resolvedIP": "10.0.2.30", "type": "A" }
+    },
+    {
+      "id": "node-r1",    "type": "router",       "col": 7, "row": 4,
+      "label": "R1", "checkpoint": true,
+      "routingTable": [
+        { "prefix": "10.0.2.0/24", "nextHop": "node-dest", "interface": "eth0" }
+      ]
+    },
+    { "id": "node-dest",  "type": "destination",  "col": 9, "row": 4, "label": "web.fcc" }
+  ],
+  "edges": [
+    { "from": "node-spawn", "to": "node-jct",  "directed": false, "dropRate": 0 },
+    { "from": "node-jct",   "to": "node-dns",  "directed": false, "dropRate": 0 },
+    { "from": "node-jct",   "to": "node-r1",   "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-dest", "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",    "text": "YOU: 10.0.1.5",        "attachToNode": "node-spawn", "offsetY": -40, "style": "ip-label"     },
+    { "id": "lbl-domain", "text": "DEST: web.fcc (?)",     "attachToNode": "node-spawn", "offsetY": -58, "style": "ip-label"     },
+    { "id": "lbl-dns",    "text": "DNS RESOLVER",          "attachToNode": "node-dns",   "offsetY": -40, "style": "cidr-label"   },
+    { "id": "lbl-record", "text": "web.fcc -> 10.0.2.30", "attachToNode": "node-dns",   "offsetY": -58, "style": "routing-entry"},
+    { "id": "lbl-dest",   "text": "10.0.2.30",            "attachToNode": "node-dest",  "offsetY": -40, "style": "ip-label"     }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "domain-name",
+      "triggerNode": "node-spawn",
+      "headline": "Domain Name",
+      "body": "Instead of memorising 10.0.2.30, you use the name web.fcc. A domain name is a human-readable label assigned to an IP address. Your packet knows its destination by name but needs the actual IP before it can be routed.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "dns",
+      "triggerNode": "node-jct",
+      "headline": "DNS - Domain Name System",
+      "body": "DNS is a distributed database that maps domain names to IP addresses. When you visit a website, your device queries a DNS resolver before sending any other traffic. The resolver looks up the name and returns the IP.",
+      "highlightNodeId": "node-jct"
+    },
+    {
+      "termKey": "a-record",
+      "triggerNode": "node-dns",
+      "headline": "A Record",
+      "body": "An A record (Address record) is the most common DNS record type. It maps a domain name to an IPv4 address. web.fcc -> 10.0.2.30. Your routing table can now match that IP and forward the packet correctly.",
+      "highlightNodeId": "node-dns"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination"
+}

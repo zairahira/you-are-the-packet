@@ -1,0 +1,87 @@
+{
+  "id": 6,
+  "title": "The Handshake",
+  "concept": "tcp-handshake",
+  "theory": {
+    "title": "TCP: The Three-Way Handshake",
+    "bodyParagraphs": [
+      {
+        "heading": "Why does TCP exist?",
+        "text": "IP delivers packets but makes no guarantees - packets can be lost, reordered, or duplicated. TCP adds reliability. Before any data flows, both sides must agree to talk. That agreement is the three-way handshake."
+      },
+      {
+        "heading": "The three steps",
+        "text": "Step 1: the client sends SYN (synchronise). Step 2: the server replies SYN-ACK (synchronise + acknowledge). Step 3: the client sends ACK (acknowledge). Only then is the connection ESTABLISHED and data can flow."
+      },
+      {
+        "heading": "Why can't you skip steps?",
+        "text": "Each step confirms that both sides can send and receive. Sending ACK before receiving SYN-ACK would mean acknowledging something you never saw. TCP rejects out-of-order steps to prevent broken connections."
+      }
+    ],
+    "mission": "You need an ESTABLISHED connection before the server will accept your packet. Follow the handshake in order: SYN, then SYN-ACK, then ACK. There is a shortcut above SYN - try it and see what happens."
+  },
+  "gridWidth": 11,
+  "gridHeight": 8,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.0.1.5",
+    "destIP": "10.0.2.40",
+    "portTag": 80,
+    "domainName": null
+  },
+  "destination": { "nodeId": "node-dest", "label": "Server" },
+  "nodes": [
+    { "id": "node-spawn",    "type": "spawn",       "col": 1,  "row": 4 },
+    { "id": "node-syn",      "type": "tcp-node",    "col": 3,  "row": 4, "checkpoint": true, "tcpStep": "syn",     "label": "1. SYN" },
+    { "id": "node-ack-dead", "type": "tcp-node",    "col": 3,  "row": 2, "tcpStep": "ack",   "label": "ACK?" },
+    { "id": "node-synack",   "type": "tcp-node",    "col": 5,  "row": 4, "tcpStep": "syn-ack","label": "2. SYN-ACK"},
+    { "id": "node-ack",      "type": "tcp-node",    "col": 8,  "row": 4, "checkpoint": true, "tcpStep": "ack",     "label": "3. ACK" },
+    { "id": "node-dest",     "type": "destination", "col": 10, "row": 4, "requiresTcpState": "ESTABLISHED", "label": "Server" }
+  ],
+  "edges": [
+    { "from": "node-spawn",    "to": "node-syn",    "directed": false, "dropRate": 0 },
+    { "from": "node-syn",      "to": "node-ack-dead","directed": false, "dropRate": 0 },
+    { "from": "node-syn",      "to": "node-synack", "directed": false, "dropRate": 0 },
+    { "from": "node-synack",   "to": "node-ack",    "directed": false, "dropRate": 0 },
+    { "from": "node-ack",      "to": "node-dest",   "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",   "text": "YOU: 10.0.1.5",   "attachToNode": "node-spawn",    "offsetY": -40, "style": "ip-label"  },
+    { "id": "lbl-dest",  "text": "DEST: 10.0.2.40", "attachToNode": "node-dest",     "offsetY": -40, "style": "ip-label"  },
+    { "id": "lbl-skip",  "text": "SKIP SYN-ACK?",   "attachToNode": "node-ack-dead", "offsetY": -40, "style": "rule-text" }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "tcp",
+      "triggerNode": "node-spawn",
+      "headline": "TCP",
+      "body": "TCP (Transmission Control Protocol) is a transport protocol that sits above IP. It provides ordered, reliable delivery by establishing a connection before sending data. Most web traffic uses TCP.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "syn",
+      "triggerNode": "node-syn",
+      "headline": "SYN - Synchronise",
+      "body": "SYN is the first message in a TCP handshake. The client sends it to say: I want to open a connection. Without SYN, the server has no context for any data that follows.",
+      "highlightNodeId": "node-syn"
+    },
+    {
+      "termKey": "syn-ack",
+      "triggerNode": "node-synack",
+      "headline": "SYN-ACK",
+      "body": "SYN-ACK is the server's reply. It acknowledges your SYN and sends back its own. This proves the server received your request and is ready to communicate. Now you know the server is alive and listening.",
+      "highlightNodeId": "node-synack"
+    },
+    {
+      "termKey": "established",
+      "triggerNode": "node-ack",
+      "headline": "ESTABLISHED",
+      "body": "After you send ACK, the connection state becomes ESTABLISHED. Both sides have confirmed they can send and receive. Only now will the server accept data. This three-message exchange happens in milliseconds on every TCP connection you make.",
+      "highlightNodeId": "node-ack"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination"
+}

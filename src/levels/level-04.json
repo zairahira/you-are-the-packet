@@ -1,0 +1,99 @@
+{
+  "id": 4,
+  "title": "The Firewall Gate",
+  "concept": "ports-and-firewalls",
+  "theory": {
+    "title": "Firewalls and Ports",
+    "bodyParagraphs": [
+      {
+        "heading": "What is a port?",
+        "text": "Every network service listens on a numbered port. Web servers use port 80 (HTTP) or 443 (HTTPS). SSH remote access uses port 22. Your packet carries port 80 because it is HTTP traffic."
+      },
+      {
+        "heading": "What does a firewall do?",
+        "text": "A firewall sits between network segments and checks each packet against a list of rules. Rules specify which ports are allowed or denied. The first matching rule wins. If no rule matches, traffic is denied by default."
+      },
+      {
+        "heading": "Reading the rules",
+        "text": "Look at the label on each gate ahead. One reads ALLOWS: 80, 443 and the other ALLOWS: 22. Your packet carries port 80, so only one gate will let you through."
+      }
+    ],
+    "mission": "You are carrying HTTP traffic on port 80. Two firewall gates stand between you and the server. Read the rules on each gate, then pass through the one that allows port 80."
+  },
+  "gridWidth": 10,
+  "gridHeight": 8,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.0.1.5",
+    "destIP": "10.0.2.20",
+    "portTag": 80,
+    "domainName": null
+  },
+  "destination": { "nodeId": "node-dest", "label": "web-server" },
+  "nodes": [
+    { "id": "node-spawn",   "type": "spawn",       "col": 1, "row": 4 },
+    { "id": "node-chk",     "type": "exit",        "col": 3, "row": 4, "checkpoint": true },
+    { "id": "node-jct",     "type": "exit",        "col": 5, "row": 4 },
+    {
+      "id": "node-fw-http", "type": "firewall",    "col": 5, "row": 2, "label": "FW-HTTP",
+      "firewallRules": [
+        { "port": 80,  "protocol": "*", "action": "allow" },
+        { "port": 443, "protocol": "*", "action": "allow" },
+        { "port": "*", "protocol": "*", "action": "deny"  }
+      ]
+    },
+    {
+      "id": "node-fw-ssh",  "type": "firewall",    "col": 5, "row": 6, "label": "FW-SSH",
+      "firewallRules": [
+        { "port": 22,  "protocol": "*", "action": "allow" },
+        { "port": "*", "protocol": "*", "action": "deny"  }
+      ]
+    },
+    { "id": "node-ex-http", "type": "exit",        "col": 7, "row": 2 },
+    { "id": "node-dest",    "type": "destination", "col": 9, "row": 2, "label": "web-server" },
+    { "id": "node-ex-ssh",  "type": "exit",        "col": 7, "row": 6, "label": "SSH Server" }
+  ],
+  "edges": [
+    { "from": "node-spawn",   "to": "node-chk",     "directed": false, "dropRate": 0 },
+    { "from": "node-chk",     "to": "node-jct",     "directed": false, "dropRate": 0 },
+    { "from": "node-jct",     "to": "node-fw-http", "directed": false, "dropRate": 0 },
+    { "from": "node-jct",     "to": "node-fw-ssh",  "directed": false, "dropRate": 0 },
+    { "from": "node-fw-http", "to": "node-ex-http", "directed": false, "dropRate": 0 },
+    { "from": "node-ex-http", "to": "node-dest",    "directed": false, "dropRate": 0 },
+    { "from": "node-fw-ssh",  "to": "node-ex-ssh",  "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",     "text": "YOU: 10.0.1.5",  "attachToNode": "node-spawn",   "offsetY": -40, "style": "ip-label"  },
+    { "id": "lbl-port",    "text": "PORT: 80",         "attachToNode": "node-spawn",   "offsetY": -58, "style": "port-label"},
+    { "id": "lbl-dest",    "text": "DEST: 10.0.2.20", "attachToNode": "node-dest",    "offsetY": -40, "style": "ip-label"  },
+    { "id": "lbl-fw-http", "text": "ALLOWS: 80, 443", "attachToNode": "node-fw-http", "offsetY": -40, "style": "rule-text" },
+    { "id": "lbl-fw-ssh",  "text": "ALLOWS: 22",       "attachToNode": "node-fw-ssh",  "offsetY": -40, "style": "rule-text" }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "port",
+      "triggerNode": "node-spawn",
+      "headline": "Port",
+      "body": "A port is a number that identifies which service a packet is addressed to. You carry port 80 - the standard port for HTTP web traffic. Think of it as the apartment number inside a building whose street address is the IP.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "firewall",
+      "triggerNode": "node-jct",
+      "headline": "Firewall",
+      "body": "A firewall checks every packet against a set of rules before letting it through. Rules are matched top to bottom - the first match wins. If nothing matches, the packet is dropped. Read the labels on the gates ahead.",
+      "highlightNodeId": "node-jct"
+    },
+    {
+      "termKey": "http",
+      "triggerNode": "node-dest",
+      "headline": "HTTP",
+      "body": "HTTP (HyperText Transfer Protocol) is how web browsers fetch pages. It runs on port 80. When you type a URL, your browser sends an HTTP request - a packet just like you - toward port 80 on a web server.",
+      "highlightNodeId": "node-dest"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination"
+}

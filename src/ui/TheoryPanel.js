@@ -15,9 +15,10 @@ function _bestMatchPrefix(destIP, routingTable) {
 
 function _highlightIPs(text, srcIP, destIP) {
   const escape = s => s.replace(/\./g, '\\.')
-  return text
-    .replace(new RegExp(escape(srcIP), 'g'), `<span class="ip-val">${srcIP}</span>`)
-    .replace(new RegExp(escape(destIP), 'g'), `<span class="ip-val">${destIP}</span>`)
+  let result = text
+  if (srcIP)  result = result.replace(new RegExp(escape(srcIP),  'g'), `<span class="ip-val">${srcIP}</span>`)
+  if (destIP) result = result.replace(new RegExp(escape(destIP), 'g'), `<span class="ip-val">${destIP}</span>`)
+  return result
 }
 
 export default class TheoryPanel {

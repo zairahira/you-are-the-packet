@@ -12,6 +12,7 @@ function ipInCIDR(ip, cidr) {
 
 export default class RoutingEngine {
   validateMove(packet, fromNode, toNode) {
+    if (!packet.destIP) return { valid: false, matchedRoute: null }
     const table = fromNode.routingTable
     if (!table || table.length === 0) return { valid: true, matchedRoute: null }
 

@@ -125,11 +125,41 @@ function _onKey(e) {
 
   const fromNode = _levelState.getNode(_packet.currentNodeId)
 
+  // Drop rate check
+  const edge = _levelState.getEdge(_packet.currentNodeId, targetNode.id)
+  if (edge && (edge.dropRate || 0) >= 1) {
+    _packet.playBlocked()
+    _checkpointSystem.respawn(_packet)
+    _hud.update(_packet)
+    _inputCooldown = 400
+    return
+  }
+
   // Firewall check
   if (targetNode.type === 'firewall' && targetNode.firewallRules?.length) {
     const result = _firewallChecker.check(_packet, targetNode)
     if (!result.allowed) {
       _theoryPanel.highlight(targetNode.id, result.blockingRule?.prefix)
+      _packet.playBlocked()
+      _checkpointSystem.respawn(_packet)
+      _hud.update(_packet)
+      _inputCooldown = 400
+      return
+    }
+  }
+
+  // TCP node check
+  if (targetNode.type === 'tcp-node') {
+    if (!_checkTcpTransition(_packet.tcpState, targetNode.tcpStep)) {
+      _packet.playBlocked()
+      _checkpointSystem.respawn(_packet)
+      _hud.update(_packet)
+      _inputCooldown = 400
+      return
+    }
+  }
+  if (targetNode.type === 'destination' && targetNode.requiresTcpState) {
+    if (_packet.tcpState !== targetNode.requiresTcpState) {
       _packet.playBlocked()
       _checkpointSystem.respawn(_packet)
       _hud.update(_packet)
@@ -156,10 +186,28 @@ function _onKey(e) {
 }
 
 function _onArrived(node) {
+  if (node.type === 'tcp-node' && node.tcpStep) {
+    if      (node.tcpStep === 'syn'     && (!_packet.tcpState || _packet.tcpState === 'IDLE'))         _packet.tcpState = 'SYN_SENT'
+    else if (node.tcpStep === 'syn-ack' && _packet.tcpState === 'SYN_SENT')                            _packet.tcpState = 'SYN_ACK_RECEIVED'
+    else if (node.tcpStep === 'ack'     && _packet.tcpState === 'SYN_ACK_RECEIVED')                    _packet.tcpState = 'ESTABLISHED'
+  }
+  if (node.type === 'dns-resolver' && node.dnsRecord && !_packet.destIP) {
+    _packet.destIP = node.dnsRecord.resolvedIP
+  }
+  if (node.type === 'nat-gateway' && node.publicIP) {
+    _packet.srcIP = node.publicIP
+  }
   if (node.checkpoint) _checkpointSystem.save(_packet)
   _firePendingIntros(node)
   if (node.type === 'destination') { _onLevelComplete(); return }
   _hud.update(_packet)
+}
+
+function _checkTcpTransition(state, tcpStep) {
+  if (tcpStep === 'syn')     return !state || state === 'IDLE' || state === 'SYN_SENT'
+  if (tcpStep === 'syn-ack') return state === 'SYN_SENT' || state === 'SYN_ACK_RECEIVED'
+  if (tcpStep === 'ack')     return state === 'SYN_ACK_RECEIVED' || state === 'ESTABLISHED'
+  return true
 }
 
 function _firePendingIntros(node) {
