@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>You Are the Packet</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #0a0a23;
+      color: #f5f6f7;
+      font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+      font-size: 18px;
+      overflow: hidden;
+    }
+
+    /* ── Screen containers ── */
+    #screen-menu {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 32px 24px;
+      gap: 24px;
+    }
+
+    #screen-game {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    /* ── Menu typography ── */
+    .menu-title {
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      color: #dbb8ff;
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+
+    .menu-sub {
+      font-size: 1rem;
+      color: #858591;
+      text-align: center;
+    }
+
+    .menu-footer {
+      font-size: 0.85rem;
+      color: #858591;
+      text-align: center;
+    }
+
+    /* ── Level grid ── */
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    @media (max-width: 900px)  { .level-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 640px)  { .level-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 380px)  { .level-grid { grid-template-columns: 1fr; } }
+
+    .level-card {
+      background: #1b1b32;
+      border: 1px solid #3b3b4f;
+      padding: 16px;
+      text-align: left;
+      cursor: default;
+      color: #858591;
+      font-family: inherit;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      transition: border-color 0.1s, background 0.1s;
+    }
+
+    .level-card.unlocked {
+      background: #2a2a40;
+      border-color: #dbb8ff;
+      color: #f5f6f7;
+      cursor: pointer;
+    }
+
+    .level-card.unlocked:hover,
+    .level-card.unlocked:focus-visible {
+      background: #1b1b32;
+      outline: 2px solid #198eee;
+      outline-offset: 2px;
+    }
+
+    .card-title   { font-weight: bold; color: inherit; }
+    .card-concept { color: #99c9ff; font-size: 0.78rem; }
+    .card-lock    { position: absolute; top: 12px; right: 12px; font-size: 1rem; }
+
+    .level-card.locked .card-concept { color: #858591; }
+
+    /* ── HUD ── */
+    #hud {
+      flex: 0 0 40px;
+      min-height: 40px;
+      background: #1b1b32;
+      border-bottom: 1px solid #3b3b4f;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 20px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    #hud-level { color: #858591; flex: 0 0 auto; }
+    #hud-sep   { color: #3b3b4f; flex: 1; }
+    #hud-src   { color: #99c9ff; font-weight: bold; flex: 0 0 auto; }
+    #hud-arrow { color: #858591; flex: 0 0 auto; }
+    #hud-dest  { color: #acd157; font-weight: bold; flex: 0 0 auto; }
+    #hud-port  { color: #f1be32; flex: 0 0 auto; }
+
+    /* ── Game body (theory panel + canvas) ── */
+    #game-body {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      min-height: 0;
+    }
+
+    #theory-panel {
+      flex: 0 0 25%;
+      width: 25%;
+      min-width: 260px;
+      background: #1b1b32;
+      border-right: 1px solid #3b3b4f;
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      overflow-y: auto;
+    }
+
+    .theory-tag {
+      font-size: 0.7rem;
+      color: #858591;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .theory-title {
+      font-size: 1.15rem;
+      font-weight: bold;
+      color: #dbb8ff;
+      line-height: 1.35;
+      margin-top: -8px;
+    }
+
+    .theory-body {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .theory-para {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .theory-para-heading {
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #99c9ff;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .theory-body-p {
+      font-size: 0.85rem;
+      color: #d0d0d5;
+      line-height: 1.7;
+      margin: 0;
+    }
+
+    /* ── Routing tables in theory panel ── */
+    .theory-router {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .theory-router-name {
+      font-size: 0.72rem;
+      color: #f1be32;
+      letter-spacing: 0.06em;
+    }
+
+    .rt-table {
+      font-size: 0.82rem;
+      font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    .rt-table th {
+      color: #858591;
+      text-align: left;
+      padding: 3px 8px;
+      border-bottom: 1px solid #3b3b4f;
+      font-weight: normal;
+    }
+
+    .rt-table td {
+      color: #d0d0d5;
+      padding: 5px 8px;
+    }
+
+    .rt-table tr.rt-highlight td {
+      color: #f1be32;
+      background: rgba(241, 190, 50, 0.12);
+    }
+
+    .rt-table.rt-highlight-table {
+      outline: 1px solid #f1be32;
+    }
+
+    .rt-table tr.rt-match td {
+      color: #acd157;
+    }
+
+    .theory-section-label {
+      font-size: 0.68rem;
+      font-weight: bold;
+      color: #dbb8ff;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-bottom: 1px solid #3b3b4f;
+      padding-bottom: 6px;
+    }
+
+    .theory-mission {
+      font-size: 0.88rem;
+      color: #f5f6f7;
+      line-height: 1.7;
+      margin: 0;
+      padding-left: 12px;
+      border-left: 2px solid #acd157;
+    }
+
+    .ip-val {
+      color: #99c9ff;
+      font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+    }
+
+    /* ── Canvas ── */
+    #game-canvas {
+      flex: 1;
+      display: block;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    /* ── Term callout ── */
+    #callout {
+      position: fixed;
+      display: none;
+      background: #2a2a40;
+      border: 2px solid #dbb8ff;
+      padding: 18px 20px;
+      max-width: 340px;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .callout-headline {
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #dbb8ff;
+      margin-bottom: 10px;
+    }
+
+    .callout-body {
+      font-size: 0.8rem;
+      color: #d0d0d5;
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+
+    .callout-dismiss {
+      font-size: 0.7rem;
+      color: #858591;
+      text-align: right;
+    }
+
+    /* ── Modal overlay ── */
+    #modal-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 35, 0.85);
+      z-index: 200;
+    }
+
+    .modal-panel {
+      background: #2a2a40;
+      border: 1px solid #3b3b4f;
+      padding: 40px 48px;
+      min-width: 300px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-panel h2 {
+      font-size: 1.2rem;
+      color: #f5f6f7;
+      letter-spacing: 0.06em;
+    }
+
+    .modal-badge {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #acd157;
+      letter-spacing: 0.06em;
+    }
+
+    .modal-sub {
+      font-size: 0.85rem;
+      color: #858591;
+    }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      background: #f1be32;
+      color: #0a0a23;
+      border: none;
+      padding: 12px 28px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+    }
+
+    .btn-primary:hover  { background: #f9d060; }
+    .btn-primary:focus-visible { outline: 2px solid #198eee; outline-offset: 2px; }
+
+    .btn-ghost {
+      background: transparent;
+      color: #f5f6f7;
+      border: 1px solid #3b3b4f;
+      padding: 10px 28px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .btn-ghost:hover        { border-color: #dbb8ff; color: #dbb8ff; }
+    .btn-ghost:focus-visible { outline: 2px solid #198eee; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+
+  <!-- Menu screen -->
+  <div id="screen-menu"></div>
+
+  <!-- Game screen -->
+  <div id="screen-game">
+    <div id="hud">
+      <span id="hud-level"></span>
+      <span id="hud-sep"></span>
+      <span id="hud-src"></span>
+      <span id="hud-arrow">-&gt;</span>
+      <span id="hud-dest"></span>
+      <span id="hud-port"></span>
+    </div>
+    <div id="game-body">
+      <div id="theory-panel"></div>
+      <canvas id="game-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Term callout (overlays game canvas) -->
+  <div id="callout"></div>
+
+  <!-- Pause / transition modal -->
+  <div id="modal-overlay"></div>
+
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>

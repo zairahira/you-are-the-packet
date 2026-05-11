@@ -1,0 +1,122 @@
+{
+  "id": 1,
+  "title": "First Hop",
+  "concept": "basic-routing",
+  "theory": {
+    "title": "How Packets Find Their Way",
+    "bodyParagraphs": [
+      {
+        "heading": "Why does a routing table exist?",
+        "text": "A router connects multiple networks. Without a routing table it has no idea which direction to send a packet - it would have to flood every port and let every connected device sort it out, which would overwhelm the network instantly. The routing table solves this: it is a lookup list that maps destination address ranges to specific exit ports, so the router can make a fast, precise forwarding decision for every packet."
+      },
+      {
+        "heading": "Network interfaces - eth0, eth1...",
+        "text": "An interface is a physical (or virtual) port on the router - the socket where a cable plugs in. eth0 is the first Ethernet port, eth1 the second, and so on. Think of a router as a building with multiple doors: eth0 leads to one corridor, eth1 to another. The routing table is the sign at the entrance telling each visitor which door to use based on their destination."
+      },
+      {
+        "heading": "A concrete example",
+        "text": "R1 in this level has two rows. If your destination is 192.168.1.20, that address falls inside 192.168.1.0/24 (addresses .0 through .255), so R1 sends you out eth0. If you were heading to 10.0.0.5 instead, the 10.0.0.0/8 row would match and you would leave via eth1 - a completely different physical path."
+      }
+    ],
+    "mission": "You are 192.168.1.5 delivering to 192.168.1.20.\n\nAt R1: find the routing table row whose prefix covers 192.168.1.20, then move through that exit."
+  },
+  "gridWidth": 10,
+  "gridHeight": 8,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "192.168.1.5",
+    "destIP": "192.168.1.20",
+    "portTag": null,
+    "domainName": null
+  },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "192.168.1.20"
+  },
+  "nodes": [
+    {
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 4,
+      "label": null
+    },
+    {
+      "id": "node-router-a",
+      "type": "router",
+      "col": 4,
+      "row": 4,
+      "label": "R1",
+      "checkpoint": true,
+      "routingTable": [
+        { "prefix": "192.168.1.0/24", "nextHop": "node-exit-a", "interface": "eth0" },
+        { "prefix": "10.0.0.0/8",     "nextHop": "node-exit-b", "interface": "eth1" }
+      ]
+    },
+    {
+      "id": "node-exit-a",
+      "type": "exit",
+      "col": 4,
+      "row": 2,
+      "label": "192.168.1.0/24"
+    },
+    {
+      "id": "node-exit-b",
+      "type": "exit",
+      "col": 4,
+      "row": 6,
+      "label": "10.0.0.0/8"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 8,
+      "row": 2,
+      "label": "Server"
+    }
+  ],
+  "edges": [
+    { "from": "node-spawn",    "to": "node-router-a", "directed": false, "dropRate": 0 },
+    { "from": "node-router-a", "to": "node-exit-a",   "directed": false, "dropRate": 0 },
+    { "from": "node-router-a", "to": "node-exit-b",   "directed": false, "dropRate": 0 },
+    { "from": "node-exit-a",   "to": "node-dest",     "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    {
+      "id": "label-my-ip",
+      "text": "YOU: 192.168.1.5",
+      "attachToNode": "node-spawn",
+      "offsetX": 0,
+      "offsetY": -36,
+      "style": "ip-label"
+    },
+    {
+      "id": "label-dest-ip",
+      "text": "DEST: 192.168.1.20",
+      "attachToNode": "node-dest",
+      "offsetX": 0,
+      "offsetY": -36,
+      "style": "ip-label"
+    }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "ip-address",
+      "triggerNode": "node-spawn",
+      "headline": "IP Address",
+      "body": "Your unique address on the network: 192.168.1.5. The server you're delivering to is at 192.168.1.20. Use arrow keys to move.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "routing-table",
+      "triggerNode": "node-router-a",
+      "headline": "Routing Table",
+      "body": "A list of rules that tells this router where to send packets. Find the rule that matches your destination IP and follow that exit.",
+      "highlightNodeId": "node-router-a"
+    }
+  ],
+  "checkpointBehavior": "last-router",
+  "completionCondition": "reach-destination"
+}

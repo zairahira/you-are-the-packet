@@ -1,0 +1,139 @@
+{
+  "id": 2,
+  "title": "Chain Reaction",
+  "concept": "multiple-hops",
+  "theory": {
+    "title": "Hops: One Router at a Time",
+    "bodyParagraphs": [
+      {
+        "heading": "Hop-by-hop routing",
+        "text": "Each router you pass through counts as one hop. At every hop, that router reads your destination IP and consults its own routing table - completely independent of every other router on the path. Routers do not coordinate with each other; each one makes a local decision."
+      },
+      {
+        "heading": "Time to Live (TTL)",
+        "text": "A TTL counter is embedded in every packet. Each router decrements it by 1 before forwarding. If TTL reaches 0, the packet is dropped. This prevents packets from circling the internet indefinitely when routing loops occur."
+      }
+    ],
+    "mission": "You are 10.0.1.5 delivering to 10.0.2.10.\n\nTwo routers stand between you and the destination. At each hop, read that router's table independently and follow the matching exit."
+  },
+  "gridWidth": 10,
+  "gridHeight": 8,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.0.1.5",
+    "destIP": "10.0.2.10",
+    "portTag": null,
+    "domainName": null
+  },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "10.0.2.10"
+  },
+  "nodes": [
+    {
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 4,
+      "label": null
+    },
+    {
+      "id": "node-r1",
+      "type": "router",
+      "col": 3,
+      "row": 4,
+      "label": "R1",
+      "checkpoint": true,
+      "routingTable": [
+        { "prefix": "10.0.2.0/24",    "nextHop": "node-r2",    "interface": "eth0" },
+        { "prefix": "192.168.0.0/16", "nextHop": "node-dead1", "interface": "eth1" }
+      ]
+    },
+    {
+      "id": "node-dead1",
+      "type": "exit",
+      "col": 3,
+      "row": 2,
+      "label": "192.168.0.0/16"
+    },
+    {
+      "id": "node-r2",
+      "type": "router",
+      "col": 6,
+      "row": 4,
+      "label": "R2",
+      "checkpoint": true,
+      "routingTable": [
+        { "prefix": "10.0.2.0/24", "nextHop": "node-exit", "interface": "eth0" },
+        { "prefix": "10.0.1.0/24", "nextHop": "node-dead2", "interface": "eth1" }
+      ]
+    },
+    {
+      "id": "node-dead2",
+      "type": "exit",
+      "col": 6,
+      "row": 6,
+      "label": "10.0.1.0/24"
+    },
+    {
+      "id": "node-exit",
+      "type": "exit",
+      "col": 6,
+      "row": 2,
+      "label": "10.0.2.0/24"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 9,
+      "row": 2,
+      "label": "Server"
+    }
+  ],
+  "edges": [
+    { "from": "node-spawn",  "to": "node-r1",    "directed": false, "dropRate": 0 },
+    { "from": "node-r1",     "to": "node-dead1",  "directed": false, "dropRate": 0 },
+    { "from": "node-r1",     "to": "node-r2",     "directed": false, "dropRate": 0 },
+    { "from": "node-r2",     "to": "node-dead2",  "directed": false, "dropRate": 0 },
+    { "from": "node-r2",     "to": "node-exit",   "directed": false, "dropRate": 0 },
+    { "from": "node-exit",   "to": "node-dest",   "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    {
+      "id": "label-src",
+      "text": "YOU: 10.0.1.5",
+      "attachToNode": "node-spawn",
+      "offsetX": 0,
+      "offsetY": -36,
+      "style": "ip-label"
+    },
+    {
+      "id": "label-dest",
+      "text": "DEST: 10.0.2.10",
+      "attachToNode": "node-dest",
+      "offsetX": 0,
+      "offsetY": -36,
+      "style": "ip-label"
+    }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "ttl",
+      "triggerNode": "node-r1",
+      "headline": "TTL - Time to Live",
+      "body": "Every packet carries a TTL counter. Each router decrements it by 1. If TTL hits 0, the packet is dropped. This stops packets from looping the internet forever.",
+      "highlightNodeId": "node-r1"
+    },
+    {
+      "termKey": "hop",
+      "triggerNode": "node-r2",
+      "headline": "Hop",
+      "body": "Each router a packet passes through is one hop. You just made your first hop from R1 to R2. Real internet traffic crosses dozens of hops to reach its destination.",
+      "highlightNodeId": "node-r2"
+    }
+  ],
+  "checkpointBehavior": "last-router",
+  "completionCondition": "reach-destination"
+}

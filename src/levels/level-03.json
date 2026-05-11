@@ -1,0 +1,131 @@
+{
+  "id": 3,
+  "title": "The Subnet Maze",
+  "concept": "subnet-prefix-match",
+  "theory": {
+    "title": "The Most Specific Route Wins",
+    "bodyParagraphs": [
+      {
+        "heading": "Longest prefix match",
+        "text": "When a destination IP matches more than one routing table row, the router uses the longest prefix match rule - it always picks the most specific route."
+      },
+      {
+        "heading": "Prefix lengths and specificity",
+        "text": "Prefix length measures specificity: /24 covers 256 addresses, /16 covers 65,536, /8 covers 16 million, and /0 covers everything. A longer prefix means fewer addresses - a tighter, more targeted rule."
+      },
+      {
+        "heading": "The default route",
+        "text": "0.0.0.0/0 is the catch-all default route. Routers only use it when no more specific rule matches. Real networks use this as a last-resort path to the internet."
+      }
+    ],
+    "mission": "You are 10.1.1.5 delivering to 10.1.1.20.\n\nAll three rows at R1 match your destination. Pick the row with the highest prefix number - that is the most specific route."
+  },
+  "gridWidth": 10,
+  "gridHeight": 8,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.1.1.5",
+    "destIP": "10.1.1.20",
+    "portTag": null,
+    "domainName": null
+  },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "10.1.1.20"
+  },
+  "nodes": [
+    {
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 4,
+      "label": null
+    },
+    {
+      "id": "node-r1",
+      "type": "router",
+      "col": 4,
+      "row": 4,
+      "label": "R1",
+      "checkpoint": true,
+      "routingTable": [
+        { "prefix": "10.1.1.0/24", "nextHop": "node-exit-24",      "interface": "eth0" },
+        { "prefix": "10.1.0.0/16", "nextHop": "node-exit-16",      "interface": "eth1" },
+        { "prefix": "0.0.0.0/0",   "nextHop": "node-exit-default", "interface": "eth2" }
+      ]
+    },
+    {
+      "id": "node-exit-24",
+      "type": "exit",
+      "col": 7,
+      "row": 4,
+      "label": "10.1.1.0/24"
+    },
+    {
+      "id": "node-exit-16",
+      "type": "exit",
+      "col": 4,
+      "row": 7,
+      "label": "10.1.0.0/16"
+    },
+    {
+      "id": "node-exit-default",
+      "type": "exit",
+      "col": 4,
+      "row": 1,
+      "label": "0.0.0.0/0"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 9,
+      "row": 4,
+      "label": "Server"
+    }
+  ],
+  "edges": [
+    { "from": "node-spawn",        "to": "node-r1",           "directed": false, "dropRate": 0 },
+    { "from": "node-r1",           "to": "node-exit-24",      "directed": false, "dropRate": 0 },
+    { "from": "node-r1",           "to": "node-exit-16",      "directed": false, "dropRate": 0 },
+    { "from": "node-r1",           "to": "node-exit-default", "directed": false, "dropRate": 0 },
+    { "from": "node-exit-24",      "to": "node-dest",         "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    {
+      "id": "label-src",
+      "text": "YOU: 10.1.1.5",
+      "attachToNode": "node-spawn",
+      "offsetX": 0,
+      "offsetY": -36,
+      "style": "ip-label"
+    },
+    {
+      "id": "label-dest",
+      "text": "DEST: 10.1.1.20",
+      "attachToNode": "node-dest",
+      "offsetX": 0,
+      "offsetY": -36,
+      "style": "ip-label"
+    }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "cidr-notation",
+      "triggerNode": "node-spawn",
+      "headline": "CIDR Notation",
+      "body": "10.1.1.0/24 means the first 24 bits identify the network. The /number is the prefix length. Larger number = smaller, more targeted network: /24 covers 256 addresses, /16 covers 65,536.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "longest-prefix-match",
+      "triggerNode": "node-r1",
+      "headline": "Longest Prefix Match",
+      "body": "All three routing table entries match 10.1.1.20. Routers always pick the most specific one - the longest prefix. Find the entry with the highest /number and follow that exit.",
+      "highlightNodeId": "node-r1"
+    }
+  ],
+  "checkpointBehavior": "last-router",
+  "completionCondition": "reach-destination"
+}
