@@ -21,6 +21,27 @@ function _highlightIPs(text, srcIP, destIP) {
   return result
 }
 
+function _buildTablesHtml(nodes, destIP) {
+  const routerNodes = (nodes || []).filter(n => n.routingTable?.length)
+  return routerNodes.map(node => {
+    const matchPrefix = destIP ? _bestMatchPrefix(destIP, node.routingTable) : null
+    const rows = node.routingTable.map(r => {
+      const isMatch = r.prefix === matchPrefix
+      return `<tr data-prefix="${r.prefix}"${isMatch ? ' class="rt-match"' : ''}>
+        <td>${r.prefix}</td><td>${r.interface}</td>
+      </tr>`
+    }).join('')
+    return `
+      <div class="theory-router">
+        <div class="theory-router-name">Router ${node.label || node.id}</div>
+        <table class="rt-table" data-node-id="${node.id}">
+          <thead><tr><th>PREFIX</th><th>IFACE</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`
+  }).join('')
+}
+
 export default class TheoryPanel {
   constructor() {
     this._el = document.getElementById('theory-panel')
@@ -34,10 +55,10 @@ export default class TheoryPanel {
     const destIP = player?.destIP
     const srcIP  = player?.srcIP
 
-    const objectiveHtml = theory.plainObjective
-      ? `<div class="theory-objective">${_highlightIPs(theory.plainObjective, srcIP, destIP)}</div>`
-      : ''
+    const isMidGame = onContinue === null
 
+    // Both pre-game and mid-game show: concept → tables → mission → button
+    // Difference is only the button label and action
     const conceptHtml = theory.bodyParagraphs
       ? theory.bodyParagraphs.map(p => `
           <div class="theory-para">
@@ -46,6 +67,8 @@ export default class TheoryPanel {
           </div>`).join('')
       : (theory.body ? `<p class="theory-body-p">${theory.body}</p>` : '')
 
+    const tablesHtml = _buildTablesHtml(levelData.nodes, destIP)
+
     const missionHtml = theory.mission
       ? theory.mission
           .split('\n\n')
@@ -53,56 +76,24 @@ export default class TheoryPanel {
           .join('')
       : ''
 
-    const routerNodes = (levelData.nodes || []).filter(n => n.routingTable?.length)
-    const tablesHtml = routerNodes.map(node => {
-      const matchPrefix = destIP ? _bestMatchPrefix(destIP, node.routingTable) : null
-      const rows = node.routingTable.map(r => {
-        const isMatch = r.prefix === matchPrefix
-        return `<tr data-prefix="${r.prefix}"${isMatch ? ' class="rt-match"' : ''}>
-          <td>${r.prefix}</td><td>${r.interface}</td>
-        </tr>`
-      }).join('')
-      return `
-        <div class="theory-router">
-          <div class="theory-router-name">Router ${node.label || node.id}</div>
-          <table class="rt-table" data-node-id="${node.id}">
-            <thead><tr><th>PREFIX</th><th>IFACE</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>`
-    }).join('')
-
-    const isMidGame = onContinue === null
-    const btnLabel  = isMidGame ? 'Got it' : 'Start Level'
-    const btnId     = 'btn-theory-continue'
+    const btnLabel = isMidGame ? 'Back to Game' : 'Start Level'
 
     this._el.innerHTML = `
       <div class="theory-tag">LEVEL ${id}</div>
       <div class="theory-title">${theory.title}</div>
 
-      ${objectiveHtml ? `<div class="theory-section-label">Objective</div>${objectiveHtml}` : ''}
-
-      ${conceptHtml ? `
-        <details class="theory-concept-details"${isMidGame ? '' : ' open'}>
-          <summary class="theory-section-label theory-concept-toggle">Concept <span class="concept-arrow">&#9654;</span></summary>
-          <div class="theory-body">${conceptHtml}</div>
-          ${missionHtml ? `<div class="theory-section-label" style="margin-top:12px">Before You Begin</div><div class="theory-body">${missionHtml}</div>` : ''}
-        </details>
-      ` : ''}
+      ${conceptHtml ? `<div class="theory-section-label">Concept</div><div class="theory-body">${conceptHtml}</div>` : ''}
 
       ${tablesHtml ? `<div class="theory-section-label">Routing Tables</div>${tablesHtml}` : ''}
 
-      <button class="btn-primary" id="${btnId}">${btnLabel}</button>
+      ${missionHtml ? `<div class="theory-section-label">Your Mission</div><div class="theory-body">${missionHtml}</div>` : ''}
+
+      <button class="btn-primary" id="btn-theory-continue">${btnLabel}</button>
     `
 
-    document.getElementById(btnId).addEventListener('click', () => {
-      if (isMidGame) {
-        this._el.innerHTML = ''
-        this._renderIdleState(levelData)
-      } else {
-        this._onContinue?.()
-        this._renderIdleState(levelData)
-      }
+    document.getElementById('btn-theory-continue').addEventListener('click', () => {
+      this._onContinue?.()
+      this._renderIdleState(levelData)
     }, { once: true })
   }
 
@@ -115,33 +106,18 @@ export default class TheoryPanel {
     const destIP = player?.destIP
     const srcIP  = player?.srcIP
 
-    const objectiveHtml = theory.plainObjective
-      ? `<div class="theory-objective">${_highlightIPs(theory.plainObjective, srcIP, destIP)}</div>`
-      : ''
+    const tablesHtml = _buildTablesHtml(levelData.nodes, destIP)
 
-    const routerNodes = (levelData.nodes || []).filter(n => n.routingTable?.length)
-    const tablesHtml = routerNodes.map(node => {
-      const matchPrefix = destIP ? _bestMatchPrefix(destIP, node.routingTable) : null
-      const rows = node.routingTable.map(r => {
-        const isMatch = r.prefix === matchPrefix
-        return `<tr data-prefix="${r.prefix}"${isMatch ? ' class="rt-match"' : ''}>
-          <td>${r.prefix}</td><td>${r.interface}</td>
-        </tr>`
-      }).join('')
-      return `
-        <div class="theory-router">
-          <div class="theory-router-name">Router ${node.label || node.id}</div>
-          <table class="rt-table" data-node-id="${node.id}">
-            <thead><tr><th>PREFIX</th><th>IFACE</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>`
-    }).join('')
+    const missionReminderHtml = theory.plainObjective
+      ? `<p class="theory-mission">${_highlightIPs(theory.plainObjective, srcIP, destIP)}</p>`
+      : ''
 
     this._el.innerHTML = `
       <div class="theory-tag">LEVEL ${id}</div>
       <div class="theory-title">${theory.title}</div>
-      ${objectiveHtml ? `<div class="theory-section-label">Objective</div>${objectiveHtml}` : ''}
+
+      ${missionReminderHtml ? `<div class="theory-section-label">Your Mission</div><div class="theory-body">${missionReminderHtml}</div>` : ''}
+
       ${tablesHtml ? `<div class="theory-section-label">Routing Tables</div>${tablesHtml}` : ''}
     `
   }
