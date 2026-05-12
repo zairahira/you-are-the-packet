@@ -295,6 +295,72 @@
     }
     #btn-help:hover { background: #3b3b5a; }
 
+    /* ── Replay badge ── */
+    #replay-badge {
+      display: none;
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 10, 35, 0.85);
+      border: 1px solid #dbb8ff;
+      color: #dbb8ff;
+      font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      padding: 5px 14px;
+      z-index: 50;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* ── Recap step panel ── */
+    #recap-step {
+      display: none;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(10, 10, 35, 0.92);
+      border-top: 1px solid #dbb8ff;
+      padding: 14px 20px;
+      z-index: 50;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #recap-step-text {
+      font-size: 0.88rem;
+      color: #f5f6f7;
+      line-height: 1.6;
+      font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+      min-height: 1.6em;
+    }
+
+    .recap-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #recap-step-hint {
+      font-size: 0.72rem;
+      color: #858591;
+      font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+    }
+
+    #btn-replay-next {
+      background: transparent;
+      border: 1px solid #dbb8ff;
+      color: #dbb8ff;
+      font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+      font-size: 1rem;
+      padding: 6px 16px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    #btn-replay-next:hover { background: rgba(219, 184, 255, 0.1); }
+
     /* ── Blocked notice toast ── */
     #blocked-notice {
       display: none;
@@ -488,6 +554,14 @@
       <div id="canvas-wrap">
         <canvas id="game-canvas"></canvas>
         <button id="btn-help" title="Show level info">?</button>
+        <div id="replay-badge">REPLAY <span id="replay-step-counter"></span></div>
+        <div id="recap-step">
+          <div id="recap-step-text"></div>
+          <div class="recap-controls">
+            <span id="recap-step-hint"></span>
+            <button id="btn-replay-next">→</button>
+          </div>
+        </div>
         <div id="blocked-notice"></div>
       </div>
     </div>

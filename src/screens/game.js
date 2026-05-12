@@ -10,18 +10,21 @@ import HUD                 from '../ui/hud.js'
 import Callout             from '../ui/callout.js'
 import TheoryPanel         from '../ui/TheoryPanel.js'
 import BlockedNotice       from '../ui/BlockedNotice.js'
+import ReplayOverlay       from '../ui/ReplayOverlay.js'
 
 let _canvas, _ctx, _canvasW, _canvasH
 let _levelData, _levelState, _packet
 let _levelLoader
 let _routingEngine, _firewallChecker, _checkpointSystem, _termTracker
-let _hud, _callout, _theoryPanel, _blockedNotice
-let _rafId       = null
-let _lastTime    = 0
-let _ro          = null
+let _hud, _callout, _theoryPanel, _blockedNotice, _replayOverlay
+let _rafId         = null
+let _lastTime      = 0
+let _ro            = null
 let _inputCooldown = 0
-let _running     = false
-let _onExit      = null
+let _running       = false
+let _onExit        = null
+let _replayStepIndex = 0
+let _replayMoving    = false
 
 export function initGame(onExit) {
   _canvas        = document.getElementById('game-canvas')
@@ -29,6 +32,7 @@ export function initGame(onExit) {
   _callout       = new Callout()
   _theoryPanel   = new TheoryPanel()
   _blockedNotice = new BlockedNotice()
+  _replayOverlay = new ReplayOverlay()
   _onExit        = onExit
 
   const helpBtn = document.getElementById('btn-help')
@@ -97,6 +101,7 @@ export function stopGame() {
   _callout?.hide()
   _theoryPanel?.hide()
   _blockedNotice?.hide()
+  _replayOverlay?.hide()
   const helpBtn = document.getElementById('btn-help')
   if (helpBtn) helpBtn.style.display = 'none'
 }
@@ -106,6 +111,7 @@ function _teardown() {
   if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null }
   if (_ro)    { _ro.disconnect(); _ro = null }
   document.removeEventListener('keydown', _onKey)
+  document.removeEventListener('keydown', _replayKeyHandler)
   _hideModal()
 }
 
@@ -304,17 +310,173 @@ function _showTransition(levelId, title, nextId) {
     ? `<p class="modal-summary">${summary}</p>`
     : ''
 
+  const recapBtn = _levelData?.correctPath?.length
+    ? `<button class="btn-ghost" id="btn-recap">Watch Recap</button>`
+    : ''
+
   _showModal(`
     <div class="modal-badge">PACKET DELIVERED</div>
     <p class="modal-sub">Level ${levelId}: ${title}</p>
     ${summaryHtml}
     ${nextBtn}
+    ${recapBtn}
     <button class="btn-ghost" id="btn-menu-t2">Main Menu</button>
   `)
 
   if (nextId) document.getElementById('btn-next').onclick = () => { _hideModal(); startLevel(nextId) }
   else        document.getElementById('btn-menu-t').onclick = () => { stopGame(); _onExit?.() }
   document.getElementById('btn-menu-t2').onclick = () => { stopGame(); _onExit?.() }
+  if (recapBtn) document.getElementById('btn-recap').onclick = () => { _hideModal(); _startReplay() }
+}
+
+function _startReplay() {
+  _replayStepIndex = 0
+  _replayMoving    = false
+
+  const startNodeId = _levelData.player.startNode
+  _packet.currentNodeId = startNodeId
+  _packet.srcIP    = _levelData.player.srcIP
+  _packet.destIP   = _levelData.player.destIP
+  _packet.portTag  = _levelData.player.portTag || null
+  _packet.tcpState = null
+  _packet.inputLocked = false
+  _packet.snapToNode()
+  _hud.update(_packet)
+
+  _replayOverlay.showIntro()
+  _replayOverlay.onNext(() => { if (!_replayMoving) _advanceReplay() })
+  document.addEventListener('keydown', _replayKeyHandler)
+
+  _running  = true
+  _lastTime = performance.now()
+  _rafId    = requestAnimationFrame(_tick)
+}
+
+function _replayKeyHandler(e) {
+  if (e.key === 'Escape') { e.preventDefault(); _exitReplay(); return }
+  if ((e.key === ' ' || e.key === 'ArrowRight') && !_replayMoving) {
+    e.preventDefault()
+    _advanceReplay()
+  }
+}
+
+function _advanceReplay() {
+  const path = _levelData.correctPath
+  if (!path) return
+
+  if (_replayStepIndex >= path.length - 1) {
+    _replayFinish()
+    return
+  }
+
+  _replayMoving = true
+  const nextIndex = _replayStepIndex + 1
+  const node = _levelState.getNode(path[nextIndex])
+  if (!node) {
+    _replayStepIndex = nextIndex
+    _replayMoving    = false
+    _advanceReplay()
+    return
+  }
+
+  _packet.moveTo(node, () => {
+    const prevSrcIP  = _packet.srcIP
+    const prevDestIP = _packet.destIP
+    _replayOnArrived(node)
+    _hud.update(_packet)
+    _replayStepIndex = nextIndex
+    _replayMoving    = false
+
+    const total      = path.length - 1
+    const isLast     = nextIndex === path.length - 1
+    const explanation = _getReplayStepExplanation(node, prevSrcIP, prevDestIP)
+    _replayOverlay.showStep(nextIndex, total, explanation, isLast)
+  })
+}
+
+function _replayFinish() {
+  document.removeEventListener('keydown', _replayKeyHandler)
+  _replayOverlay.hide()
+  _packet.playSuccess()
+  setTimeout(() => {
+    _running = false
+    if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null }
+    _showTransition(_levelData.id, _levelData.title, _levelData.id < 8 ? _levelData.id + 1 : null)
+  }, 800)
+}
+
+function _exitReplay() {
+  document.removeEventListener('keydown', _replayKeyHandler)
+  _replayOverlay.hide()
+  _running = false
+  if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null }
+  _showTransition(_levelData.id, _levelData.title, _levelData.id < 8 ? _levelData.id + 1 : null)
+}
+
+function _replayOnArrived(node) {
+  if (node.type === 'tcp-node' && node.tcpStep) {
+    if      (node.tcpStep === 'syn'     && (!_packet.tcpState || _packet.tcpState === 'IDLE'))  _packet.tcpState = 'SYN_SENT'
+    else if (node.tcpStep === 'syn-ack' && _packet.tcpState === 'SYN_SENT')                     _packet.tcpState = 'SYN_ACK_RECEIVED'
+    else if (node.tcpStep === 'ack'     && _packet.tcpState === 'SYN_ACK_RECEIVED')             _packet.tcpState = 'ESTABLISHED'
+  }
+  if (node.type === 'dns-resolver' && node.dnsRecord && !_packet.destIP) {
+    _packet.destIP = node.dnsRecord.resolvedIP
+  }
+  if (node.type === 'nat-gateway' && node.publicIP) {
+    _packet.srcIP = node.publicIP
+  }
+}
+
+function _getReplayStepExplanation(node, prevSrcIP, prevDestIP) {
+  switch (node.type) {
+    case 'router': {
+      const route = _findMatchingRoute(node.routingTable, _packet.destIP)
+      const lbl   = node.label ? ` ${node.label}` : ''
+      if (route) return `Router${lbl}: ${_packet.destIP} matches ${route.prefix} - exits via ${route.interface}.`
+      return `Router${lbl}: destination is ${_packet.destIP}.`
+    }
+    case 'firewall':
+      return `Firewall: port ${_packet.portTag} is permitted - packet passes through.`
+    case 'dns-resolver': {
+      const domain = _levelData.player.domainName || 'domain'
+      return `DNS resolver: ${domain} resolved to ${_packet.destIP}. Destination IP is now known.`
+    }
+    case 'nat-gateway':
+      return `NAT gateway: source address rewritten from ${prevSrcIP} to ${_packet.srcIP}. Private IP is now hidden.`
+    case 'tcp-node': {
+      const msgs = {
+        'syn':     'SYN: client requests a connection.',
+        'syn-ack': 'SYN-ACK: server acknowledges - both sides are ready.',
+        'ack':     'ACK: client confirms - connection is now ESTABLISHED.',
+      }
+      return msgs[node.tcpStep] || `TCP step: ${node.tcpStep}.`
+    }
+    case 'destination': {
+      const lbl = node.label || 'destination'
+      return `Packet delivered to ${lbl}.`
+    }
+    default:
+      return node.label ? `${node.label}: intermediate hop.` : 'Intermediate hop along the path.'
+  }
+}
+
+function _findMatchingRoute(routingTable, destIP) {
+  if (!routingTable || !destIP) return null
+  let best = null, bestLen = -1
+  for (const route of routingTable) {
+    const [net, bits] = route.prefix.split('/')
+    const prefixLen   = parseInt(bits, 10)
+    if (_ipMatchesCIDR(destIP, net, prefixLen) && prefixLen > bestLen) {
+      best = route; bestLen = prefixLen
+    }
+  }
+  return best
+}
+
+function _ipMatchesCIDR(ip, net, prefixLen) {
+  const toInt = s => s.split('.').reduce((n, b) => (n << 8) | parseInt(b, 10), 0) >>> 0
+  const mask  = prefixLen === 0 ? 0 : (0xffffffff << (32 - prefixLen)) >>> 0
+  return (toInt(ip) & mask) === (toInt(net) & mask)
 }
 
 function _showModal(html) {

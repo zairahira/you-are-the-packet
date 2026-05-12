@@ -97,5 +97,6 @@
     }
   ],
   "checkpointBehavior": "last-checkpoint",
-  "completionCondition": "reach-destination"
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-chk", "node-jct", "node-fw-http", "node-ex-http", "node-dest"]
 }

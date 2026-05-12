@@ -75,5 +75,6 @@
     }
   ],
   "checkpointBehavior": "last-checkpoint",
-  "completionCondition": "reach-destination"
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-chk", "node-r-a", "node-mid-a", "node-dest"]
 }

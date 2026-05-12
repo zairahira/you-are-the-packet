@@ -120,5 +120,6 @@
     }
   ],
   "checkpointBehavior": "last-router",
-  "completionCondition": "reach-destination"
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-router-a", "node-exit-a", "node-dest"]
 }
