@@ -198,8 +198,39 @@ function _onKey(e) {
     }
   }
 
+  // TLS node check
+  if (targetNode.type === 'tls-node') {
+    if (!_checkTlsTransition(_packet.tlsState, targetNode.tlsStep)) {
+      const needed = _tlsPreviousStep(targetNode.tlsStep)
+      _blockedNotice.show(`TLS handshake out of order - complete ${needed} first.`)
+      _packet.playBlocked()
+      _checkpointSystem.respawn(_packet)
+      _hud.update(_packet)
+      _inputCooldown = 400
+      return
+    }
+  }
+  if (targetNode.type === 'destination' && targetNode.requiresTlsState) {
+    if (_packet.tlsState !== targetNode.requiresTlsState) {
+      _blockedNotice.show('Server requires TLS_ESTABLISHED. Complete the TLS handshake first.')
+      _packet.playBlocked()
+      _checkpointSystem.respawn(_packet)
+      _hud.update(_packet)
+      _inputCooldown = 400
+      return
+    }
+  }
+
   // Routing check when leaving a router
   if (fromNode.type === 'router' && fromNode.routingTable?.length) {
+    if (!_packet.srcIP) {
+      _blockedNotice.show('No source IP - find a DHCP server to get an address first.')
+      _packet.playBlocked()
+      _checkpointSystem.respawn(_packet)
+      _hud.update(_packet)
+      _inputCooldown = 400
+      return
+    }
     const result = _routingEngine.validateMove(_packet, fromNode, targetNode)
     if (!result.valid) {
       _blockedNotice.show(`Wrong exit - ${_packet.destIP} doesn't match this route. Check the routing table.`)
@@ -222,11 +253,19 @@ function _onArrived(node) {
     else if (node.tcpStep === 'syn-ack' && _packet.tcpState === 'SYN_SENT')                            _packet.tcpState = 'SYN_ACK_RECEIVED'
     else if (node.tcpStep === 'ack'     && _packet.tcpState === 'SYN_ACK_RECEIVED')                    _packet.tcpState = 'ESTABLISHED'
   }
+  if (node.type === 'tls-node' && node.tlsStep) {
+    if      (node.tlsStep === 'client-hello'  && (!_packet.tlsState || _packet.tlsState === 'TLS_IDLE'))  _packet.tlsState = 'CLIENT_HELLO_SENT'
+    else if (node.tlsStep === 'server-cert'   && _packet.tlsState === 'CLIENT_HELLO_SENT')               _packet.tlsState = 'SERVER_CERT_RECEIVED'
+    else if (node.tlsStep === 'change-cipher' && _packet.tlsState === 'SERVER_CERT_RECEIVED')            _packet.tlsState = 'TLS_ESTABLISHED'
+  }
   if (node.type === 'dns-resolver' && node.dnsRecord && !_packet.destIP) {
     _packet.destIP = node.dnsRecord.resolvedIP
   }
   if (node.type === 'nat-gateway' && node.publicIP) {
     _packet.srcIP = node.publicIP
+  }
+  if (node.type === 'dhcp-server' && node.dhcpConfig) {
+    _packet.srcIP = node.dhcpConfig.assignedIP
   }
   if (node.checkpoint) _checkpointSystem.save(_packet)
   _firePendingIntros(node)
@@ -244,6 +283,19 @@ function _checkTcpTransition(state, tcpStep) {
 function _tcpPreviousStep(tcpStep) {
   if (tcpStep === 'syn-ack') return 'SYN'
   if (tcpStep === 'ack')     return 'SYN-ACK'
+  return 'the previous step'
+}
+
+function _checkTlsTransition(state, tlsStep) {
+  if (tlsStep === 'client-hello')  return !state || state === 'TLS_IDLE' || state === 'CLIENT_HELLO_SENT'
+  if (tlsStep === 'server-cert')   return state === 'CLIENT_HELLO_SENT' || state === 'SERVER_CERT_RECEIVED'
+  if (tlsStep === 'change-cipher') return state === 'SERVER_CERT_RECEIVED' || state === 'TLS_ESTABLISHED'
+  return true
+}
+
+function _tlsPreviousStep(tlsStep) {
+  if (tlsStep === 'server-cert')   return 'ClientHello'
+  if (tlsStep === 'change-cipher') return 'ServerHello + Certificate'
   return 'the previous step'
 }
 
@@ -269,7 +321,7 @@ function _onLevelComplete() {
   } catch {}
 
   setTimeout(() => {
-    _showTransition(_levelData.id, _levelData.title, _levelData.id < 8 ? _levelData.id + 1 : null)
+    _showTransition(_levelData.id, _levelData.title, _levelData.id < 12 ? _levelData.id + 1 : null)
   }, 700)
 }
 
@@ -339,6 +391,7 @@ function _startReplay() {
   _packet.destIP   = _levelData.player.destIP
   _packet.portTag  = _levelData.player.portTag || null
   _packet.tcpState = null
+  _packet.tlsState = _levelData.player.tlsState || null
   _packet.inputLocked = false
   _packet.snapToNode()
   _hud.update(_packet)
@@ -401,7 +454,7 @@ function _replayFinish() {
   setTimeout(() => {
     _running = false
     if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null }
-    _showTransition(_levelData.id, _levelData.title, _levelData.id < 8 ? _levelData.id + 1 : null)
+    _showTransition(_levelData.id, _levelData.title, _levelData.id < 12 ? _levelData.id + 1 : null)
   }, 800)
 }
 
@@ -410,7 +463,7 @@ function _exitReplay() {
   _replayOverlay.hide()
   _running = false
   if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null }
-  _showTransition(_levelData.id, _levelData.title, _levelData.id < 8 ? _levelData.id + 1 : null)
+  _showTransition(_levelData.id, _levelData.title, _levelData.id < 12 ? _levelData.id + 1 : null)
 }
 
 function _replayOnArrived(node) {
@@ -419,11 +472,19 @@ function _replayOnArrived(node) {
     else if (node.tcpStep === 'syn-ack' && _packet.tcpState === 'SYN_SENT')                     _packet.tcpState = 'SYN_ACK_RECEIVED'
     else if (node.tcpStep === 'ack'     && _packet.tcpState === 'SYN_ACK_RECEIVED')             _packet.tcpState = 'ESTABLISHED'
   }
+  if (node.type === 'tls-node' && node.tlsStep) {
+    if      (node.tlsStep === 'client-hello'  && (!_packet.tlsState || _packet.tlsState === 'TLS_IDLE'))  _packet.tlsState = 'CLIENT_HELLO_SENT'
+    else if (node.tlsStep === 'server-cert'   && _packet.tlsState === 'CLIENT_HELLO_SENT')               _packet.tlsState = 'SERVER_CERT_RECEIVED'
+    else if (node.tlsStep === 'change-cipher' && _packet.tlsState === 'SERVER_CERT_RECEIVED')            _packet.tlsState = 'TLS_ESTABLISHED'
+  }
   if (node.type === 'dns-resolver' && node.dnsRecord && !_packet.destIP) {
     _packet.destIP = node.dnsRecord.resolvedIP
   }
   if (node.type === 'nat-gateway' && node.publicIP) {
     _packet.srcIP = node.publicIP
+  }
+  if (node.type === 'dhcp-server' && node.dhcpConfig) {
+    _packet.srcIP = node.dhcpConfig.assignedIP
   }
 }
 
@@ -443,6 +504,8 @@ function _getReplayStepExplanation(node, prevSrcIP, prevDestIP) {
     }
     case 'nat-gateway':
       return `NAT gateway: source address rewritten from ${prevSrcIP} to ${_packet.srcIP}. Private IP is now hidden.`
+    case 'dhcp-server':
+      return `DHCP server: IP address ${_packet.srcIP} assigned. Was ${prevSrcIP || '(none)'}. You can now route.`
     case 'tcp-node': {
       const msgs = {
         'syn':     'SYN: client requests a connection.',
@@ -450,6 +513,14 @@ function _getReplayStepExplanation(node, prevSrcIP, prevDestIP) {
         'ack':     'ACK: client confirms - connection is now ESTABLISHED.',
       }
       return msgs[node.tcpStep] || `TCP step: ${node.tcpStep}.`
+    }
+    case 'tls-node': {
+      const msgs = {
+        'client-hello':  'ClientHello: client proposes cipher suites and sends a random value.',
+        'server-cert':   'ServerHello + Certificate: server selects a cipher and proves its identity.',
+        'change-cipher': 'ChangeCipherSpec: both sides derive session keys. Channel is now encrypted.',
+      }
+      return msgs[node.tlsStep] || `TLS step: ${node.tlsStep}.`
     }
     case 'destination': {
       const lbl = node.label || 'destination'

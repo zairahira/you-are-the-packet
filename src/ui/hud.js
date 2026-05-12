@@ -10,13 +10,14 @@ export default class HUD {
   }
 
   update(packet) {
-    if (this._srcEl)  this._srcEl.textContent  = `YOU: ${packet.srcIP}`
+    if (this._srcEl)  this._srcEl.textContent  = packet.srcIP ? `YOU: ${packet.srcIP}` : 'YOU: (no IP yet)'
     if (this._destEl) this._destEl.textContent = packet.domainName
       ? `DEST: ${packet.domainName}${packet.destIP ? ` (${packet.destIP})` : ''}`
       : `DEST: ${packet.destIP}`
     if (this._portEl) {
-      if (packet.tcpState) this._portEl.textContent = `TCP: ${packet.tcpState}`
-      else this._portEl.textContent = packet.portTag ? `PORT: ${packet.portTag}` : ''
+      if (packet.tlsState)      this._portEl.textContent = `TLS: ${packet.tlsState}`
+      else if (packet.tcpState) this._portEl.textContent = `TCP: ${packet.tcpState}`
+      else                      this._portEl.textContent = packet.portTag ? `PORT: ${packet.portTag}` : ''
     }
   }
 

@@ -1,0 +1,107 @@
+{
+  "id": 10,
+  "title": "The Divided Campus",
+  "concept": "vlan",
+  "theory": {
+    "title": "VLANs: The Logical Divide",
+    "plainObjective": "You are on VLAN 10 and your destination is on VLAN 20. Direct crossing is blocked - find the Layer-3 switch to route between them.",
+    "summary": "Every corporate network, university, and data centre uses VLANs to isolate traffic. The pattern you just followed - blocked direct path, route via L3 device - happens millions of times a day.",
+    "bodyParagraphs": [
+      {
+        "heading": "Switches don't route",
+        "text": "A standard Layer-2 switch forwards frames using MAC addresses within the same network segment. It has no concept of subnets or IP routing. Connect a device to VLAN 10 and a device to VLAN 20 on the same physical switch and they will not talk - the switch keeps them separate by design."
+      },
+      {
+        "heading": "What is a VLAN?",
+        "text": "VLAN (Virtual LAN) is a way to logically partition a network. Ports on a switch are assigned to a VLAN number. Traffic from VLAN 10 stays in VLAN 10. Even if all devices share the same physical hardware, VLANs create isolated broadcast domains - as if they were on completely different physical switches."
+      },
+      {
+        "heading": "Why segment?",
+        "text": "Organisations put different kinds of devices on different VLANs: IoT devices on VLAN 10, servers on VLAN 20, guest Wi-Fi on VLAN 30. If a device on the IoT VLAN is compromised, it cannot reach the server VLAN directly. Segmentation turns a flat network into a series of contained zones. Isolation is security."
+      },
+      {
+        "heading": "Inter-VLAN routing",
+        "text": "To move traffic between VLANs you need a Layer-3 device - a router or a Layer-3 switch with interfaces in each VLAN. It routes packets from 10.10.0.0/24 to 10.20.0.0/24 using its routing table. This is the only authorised crossing point between segments."
+      }
+    ],
+    "mission": "You are on VLAN 10 (10.10.0.5). Your destination is on VLAN 20 (10.20.0.10). The direct path across the VLAN boundary is blocked. Find the Layer-3 switch that connects both segments and route through it."
+  },
+  "gridWidth": 10,
+  "gridHeight": 8,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.10.0.5",
+    "destIP": "10.20.0.10",
+    "portTag": null,
+    "domainName": null
+  },
+  "destination": { "nodeId": "node-dest", "label": "10.20.0.10" },
+  "nodes": [
+    { "id": "node-spawn",   "type": "spawn",       "col": 1, "row": 4 },
+    { "id": "node-sw1",     "type": "exit",         "col": 3, "row": 4, "label": "VLAN 10" },
+    {
+      "id": "node-fw-vlan", "type": "firewall",     "col": 5, "row": 4,
+      "label": "VLAN BOUNDARY",
+      "firewallRules": [
+        { "port": "*", "protocol": "*", "action": "deny" }
+      ]
+    },
+    { "id": "node-sw2",     "type": "exit",         "col": 7, "row": 4, "label": "VLAN 20" },
+    { "id": "node-dest",    "type": "destination",  "col": 9, "row": 4, "label": "10.20.0.10" },
+    {
+      "id": "node-l3rtr",   "type": "router",       "col": 3, "row": 6,
+      "checkpoint": true,
+      "label": "L3 SWITCH",
+      "routingTable": [
+        { "prefix": "10.10.0.0/24", "nextHop": "node-sw1", "interface": "eth0" },
+        { "prefix": "10.20.0.0/24", "nextHop": "node-mid", "interface": "eth1" }
+      ]
+    },
+    { "id": "node-mid",     "type": "exit",         "col": 7, "row": 6 }
+  ],
+  "edges": [
+    { "from": "node-spawn",   "to": "node-sw1",     "directed": false, "dropRate": 0 },
+    { "from": "node-sw1",     "to": "node-fw-vlan", "directed": false, "dropRate": 0 },
+    { "from": "node-fw-vlan", "to": "node-sw2",     "directed": false, "dropRate": 0 },
+    { "from": "node-sw2",     "to": "node-dest",    "directed": false, "dropRate": 0 },
+    { "from": "node-sw1",     "to": "node-l3rtr",   "directed": false, "dropRate": 0 },
+    { "from": "node-l3rtr",   "to": "node-mid",     "directed": false, "dropRate": 0 },
+    { "from": "node-mid",     "to": "node-sw2",     "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",   "text": "YOU: 10.10.0.5 (VLAN 10)",  "attachToNode": "node-spawn",   "offsetY": -40, "style": "ip-label"   },
+    { "id": "lbl-dest",  "text": "DEST: 10.20.0.10 (VLAN 20)","attachToNode": "node-spawn",   "offsetY": -58, "style": "ip-label"   },
+    { "id": "lbl-sw1",   "text": "VLAN 10",                    "attachToNode": "node-sw1",     "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-fwv",   "text": "NO ROUTING",                 "attachToNode": "node-fw-vlan", "offsetY": -40, "style": "rule-text"  },
+    { "id": "lbl-l3",    "text": "L3 SWITCH",                  "attachToNode": "node-l3rtr",   "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-sw2",   "text": "VLAN 20",                    "attachToNode": "node-sw2",     "offsetY": -40, "style": "cidr-label" }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "vlan",
+      "triggerNode": "node-sw1",
+      "headline": "VLAN",
+      "body": "You are on VLAN 10 - a logical network segment. VLANs partition a physical network so traffic from one segment cannot reach another directly. Your destination is on VLAN 20. A standard switch will not forward your packet across the boundary.",
+      "highlightNodeId": "node-sw1"
+    },
+    {
+      "termKey": "vlan-isolation",
+      "triggerNode": "node-fw-vlan",
+      "headline": "VLAN Isolation",
+      "body": "Traffic cannot cross this boundary without being routed. There is no port rule here - the switch simply has no path between VLAN 10 and VLAN 20. You need a Layer-3 device to cross between segments.",
+      "highlightNodeId": "node-fw-vlan"
+    },
+    {
+      "termKey": "inter-vlan-routing",
+      "triggerNode": "node-l3rtr",
+      "headline": "Inter-VLAN Routing",
+      "body": "A Layer-3 switch has one logical interface in each VLAN. It routes packets between them using its routing table - just like a router. This is the only authorised path between VLANs in a well-designed network, which is why all inter-segment traffic can be inspected and controlled here.",
+      "highlightNodeId": "node-l3rtr"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-sw1", "node-l3rtr", "node-mid", "node-sw2", "node-dest"]
+}

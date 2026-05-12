@@ -1,12 +1,16 @@
 const LEVELS = [
-  { id: 1, title: 'First Hop',           concept: 'Basic Routing'  },
-  { id: 2, title: 'Chain Reaction',      concept: 'Multiple Hops'  },
-  { id: 3, title: 'The Subnet Maze',     concept: 'Subnets & CIDR' },
-  { id: 4, title: 'Port of Entry',       concept: 'Ports & Firewalls' },
-  { id: 5, title: "What's the Address?", concept: 'DNS'            },
-  { id: 6, title: 'Shake on It',         concept: 'TCP Handshake'  },
-  { id: 7, title: 'Lost in Transit',     concept: 'Packet Loss'    },
-  { id: 8, title: 'The Disguise',        concept: 'NAT'            },
+  { id: 1,  title: 'First Hop',                concept: 'Basic Routing'    },
+  { id: 2,  title: 'Chain Reaction',           concept: 'Multiple Hops'    },
+  { id: 3,  title: 'The Subnet Maze',          concept: 'Subnets & CIDR'   },
+  { id: 4,  title: 'Port of Entry',            concept: 'Ports & Firewalls'},
+  { id: 5,  title: "What's the Address?",      concept: 'DNS'              },
+  { id: 6,  title: 'Shake on It',              concept: 'TCP Handshake'    },
+  { id: 7,  title: 'Lost in Transit',          concept: 'Packet Loss'      },
+  { id: 8,  title: 'The Disguise',             concept: 'NAT'              },
+  { id: 9,  title: 'Getting on the Network',   concept: 'DHCP'             },
+  { id: 10, title: 'The Divided Campus',       concept: 'VLANs'            },
+  { id: 11, title: 'The Traffic Distributor',  concept: 'Load Balancing'   },
+  { id: 12, title: 'The Encrypted Channel',    concept: 'TLS'              },
 ]
 
 export function mountMenu(container, onSelect) {

@@ -14,6 +14,7 @@ export default class Packet {
     this.destIP        = playerData.destIP
     this.portTag       = playerData.portTag    || null
     this.tcpState      = null
+    this.tlsState      = playerData.tlsState   || null
     this.domainName    = playerData.domainName || null
     this.inputLocked   = false
 

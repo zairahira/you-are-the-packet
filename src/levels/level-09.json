@@ -1,0 +1,101 @@
+{
+  "id": 9,
+  "title": "Getting on the Network",
+  "concept": "dhcp",
+  "theory": {
+    "title": "DHCP: Joining the Network",
+    "plainObjective": "Find the DHCP server to get an IP address - you cannot route anywhere without one.",
+    "summary": "Every device on every network - your phone, laptop, smart TV - silently runs this same exchange in the background every time it connects.",
+    "bodyParagraphs": [
+      {
+        "heading": "You have no address",
+        "text": "When a device first connects to a network, it has no IP address. It cannot send routed traffic until one is assigned. Typing a static IP works but does not scale to thousands of devices. DHCP automates the process."
+      },
+      {
+        "heading": "What DHCP assigns",
+        "text": "A DHCP server holds a pool of available addresses called a scope. When a new device appears, the server offers an address from the pool along with the subnet mask (which addresses are local), the default gateway (where to send non-local traffic), and the DNS server (who to ask for name resolution). Four things, one exchange."
+      },
+      {
+        "heading": "The DORA exchange",
+        "text": "The full process is four messages: Discover (client broadcasts 'is there a DHCP server?'), Offer (server replies with an available address), Request (client formally asks for that address), Acknowledge (server confirms the lease). All four happen in milliseconds when you join a Wi-Fi network."
+      },
+      {
+        "heading": "Leases, not ownership",
+        "text": "DHCP addresses are leased for a limited time - typically hours or days. When the lease expires, the address returns to the pool unless renewed. This is why a device can appear with a different IP after a long outage, and why your home IP rarely changes while you stay connected."
+      }
+    ],
+    "mission": "You have no source IP - you are invisible to routers. Find the DHCP server and claim an address. Once assigned, the network will know who you are and the router will forward your packet."
+  },
+  "gridWidth": 11,
+  "gridHeight": 6,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": null,
+    "destIP": "10.50.1.20",
+    "portTag": null,
+    "domainName": null
+  },
+  "destination": { "nodeId": "node-dest", "label": "app-server" },
+  "nodes": [
+    { "id": "node-spawn", "type": "spawn",       "col": 1,  "row": 3 },
+    { "id": "node-jct",   "type": "exit",         "col": 4,  "row": 3 },
+    {
+      "id": "node-dhcp",  "type": "dhcp-server",  "col": 4,  "row": 1,
+      "checkpoint": true,
+      "dhcpConfig": {
+        "assignedIP":  "192.168.2.100",
+        "subnetMask":  "255.255.255.0",
+        "gateway":     "192.168.2.1",
+        "dnsServer":   "8.8.8.8"
+      }
+    },
+    {
+      "id": "node-r1",    "type": "router",        "col": 7,  "row": 3,
+      "label": "R1",
+      "routingTable": [
+        { "prefix": "10.50.1.0/24", "nextHop": "node-dest", "interface": "eth0" }
+      ]
+    },
+    { "id": "node-dest",  "type": "destination",  "col": 10, "row": 3, "label": "app-server" }
+  ],
+  "edges": [
+    { "from": "node-spawn", "to": "node-jct",  "directed": false, "dropRate": 0 },
+    { "from": "node-jct",   "to": "node-dhcp", "directed": false, "dropRate": 0 },
+    { "from": "node-jct",   "to": "node-r1",   "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-dest", "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",    "text": "YOU: (no IP)",           "attachToNode": "node-spawn", "offsetY": -40, "style": "ip-label"    },
+    { "id": "lbl-dest",   "text": "DEST: 10.50.1.20",       "attachToNode": "node-spawn", "offsetY": -58, "style": "ip-label"    },
+    { "id": "lbl-dhcp",   "text": "DHCP SERVER",            "attachToNode": "node-dhcp",  "offsetY": -40, "style": "cidr-label"  },
+    { "id": "lbl-assign", "text": "assigns: 192.168.2.100", "attachToNode": "node-dhcp",  "offsetY": -58, "style": "routing-entry"}
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "dhcp",
+      "triggerNode": "node-spawn",
+      "headline": "DHCP",
+      "body": "Your source IP is (none) - you have no address yet. DHCP (Dynamic Host Configuration Protocol) automatically assigns IP addresses to devices when they join a network. Without one, routers have no idea who you are or where to send replies.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "dhcp-scope",
+      "triggerNode": "node-dhcp",
+      "headline": "DHCP Scope",
+      "body": "A DHCP scope is the pool of IP addresses the server is allowed to assign. This server owns 192.168.2.0/24 and has assigned you 192.168.2.100. Along with the IP it has told you your subnet mask, default gateway, and DNS server - everything needed to communicate.",
+      "highlightNodeId": "node-dhcp"
+    },
+    {
+      "termKey": "dhcp-lease",
+      "triggerNode": "node-r1",
+      "headline": "DHCP Lease",
+      "body": "Your address is not permanently yours - it is leased for a set period. When the lease expires, the address returns to the pool. Your device renews the lease automatically while connected, which is why your home IP rarely changes even though it is technically temporary.",
+      "highlightNodeId": "node-r1"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-jct", "node-dhcp", "node-jct", "node-r1", "node-dest"]
+}

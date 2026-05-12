@@ -15,6 +15,7 @@ export default class CheckpointSystem {
       destIP:    packet.destIP,
       portTag:   packet.portTag,
       tcpState:  packet.tcpState,
+      tlsState:  packet.tlsState,
     }
   }
 
@@ -25,6 +26,7 @@ export default class CheckpointSystem {
     packet.destIP        = this.savedState.destIP
     packet.portTag       = this.savedState.portTag
     packet.tcpState      = this.savedState.tcpState
+    packet.tlsState      = this.savedState.tlsState
     packet.snapToNode()
   }
 }

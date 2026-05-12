@@ -1,0 +1,137 @@
+{
+  "id": 12,
+  "title": "The Encrypted Channel",
+  "concept": "tls",
+  "theory": {
+    "title": "TLS: The Encrypted Envelope",
+    "plainObjective": "Complete the TLS handshake in order - ClientHello, ServerHello + Certificate, ChangeCipherSpec - before the secure server will accept your packet.",
+    "summary": "This three-message exchange happens invisibly every time you visit an HTTPS site. The padlock in your browser means this handshake completed successfully.",
+    "bodyParagraphs": [
+      {
+        "heading": "Why not just TCP?",
+        "text": "TCP delivers your packet reliably, but anyone on the path can read it. Every router, ISP, and network tap between you and the server sees plain text. TLS (Transport Layer Security) wraps the data in encryption so only the intended server - the one with the right private key - can read it."
+      },
+      {
+        "heading": "The TLS handshake",
+        "text": "Before data flows, client and server negotiate how to encrypt. Step 1: ClientHello - the client lists the cipher suites it supports and sends a random value. Step 2: ServerHello + Certificate - the server picks a cipher and sends its certificate (a signed proof of identity). Step 3: ChangeCipherSpec - both sides derive matching session keys and confirm encryption is active."
+      },
+      {
+        "heading": "Certificates and trust",
+        "text": "A TLS certificate is a digital document proving a server is who it claims to be, signed by a Certificate Authority (CA) your device already trusts. When a certificate is invalid - expired, self-signed, or for the wrong domain - your browser shows a warning. Skipping the certificate check means anyone can impersonate the server."
+      },
+      {
+        "heading": "HTTPS = HTTP + TLS",
+        "text": "Port 80 sends HTTP as plain text. Port 443 wraps the same HTTP inside TLS. The application code does not change - only the transport layer differs. The port number signals to both sides that TLS must complete before any application data is exchanged."
+      }
+    ],
+    "mission": "You are connecting to a secure server on port 443. The firewall only passes HTTPS traffic. Complete the TLS handshake in order: ClientHello, then ServerHello plus Certificate, then ChangeCipherSpec. There is a shortcut - try it and see what breaks."
+  },
+  "gridWidth": 14,
+  "gridHeight": 6,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.0.5.5",
+    "destIP": "10.40.1.10",
+    "portTag": "443",
+    "tlsState": "TLS_IDLE",
+    "domainName": null
+  },
+  "destination": { "nodeId": "node-dest", "label": "secure-server", "requiresTlsState": "TLS_ESTABLISHED" },
+  "nodes": [
+    { "id": "node-spawn", "type": "spawn",       "col": 1,  "row": 4 },
+    {
+      "id": "node-r1",    "type": "router",       "col": 3,  "row": 4,
+      "checkpoint": true,
+      "label": "R1",
+      "routingTable": [
+        { "prefix": "10.40.1.0/24", "nextHop": "node-fw443", "interface": "eth0" }
+      ]
+    },
+    {
+      "id": "node-fw443", "type": "firewall",     "col": 5,  "row": 4,
+      "label": "HTTPS ONLY",
+      "firewallRules": [
+        { "port": "443", "protocol": "*", "action": "allow" },
+        { "port": "*", "protocol": "*",   "action": "deny"  }
+      ]
+    },
+    {
+      "id": "node-ch",    "type": "tls-node",     "col": 7,  "row": 4,
+      "checkpoint": true,
+      "tlsStep": "client-hello",
+      "label": "1. ClientHello"
+    },
+    {
+      "id": "node-skip",  "type": "tls-node",     "col": 7,  "row": 2,
+      "tlsStep": "change-cipher",
+      "label": "SKIP CERT?"
+    },
+    {
+      "id": "node-sc",    "type": "tls-node",     "col": 9,  "row": 4,
+      "tlsStep": "server-cert",
+      "label": "2. ServerHello + Cert"
+    },
+    {
+      "id": "node-cs",    "type": "tls-node",     "col": 11, "row": 4,
+      "checkpoint": true,
+      "tlsStep": "change-cipher",
+      "label": "3. ChangeCipherSpec"
+    },
+    {
+      "id": "node-dest",  "type": "destination",  "col": 13, "row": 4,
+      "label": "secure-server",
+      "requiresTlsState": "TLS_ESTABLISHED"
+    }
+  ],
+  "edges": [
+    { "from": "node-spawn", "to": "node-r1",    "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-fw443", "directed": false, "dropRate": 0 },
+    { "from": "node-fw443", "to": "node-ch",    "directed": false, "dropRate": 0 },
+    { "from": "node-ch",    "to": "node-skip",  "directed": false, "dropRate": 0 },
+    { "from": "node-ch",    "to": "node-sc",    "directed": false, "dropRate": 0 },
+    { "from": "node-sc",    "to": "node-cs",    "directed": false, "dropRate": 0 },
+    { "from": "node-cs",    "to": "node-dest",  "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",   "text": "YOU: 10.0.5.5",       "attachToNode": "node-spawn", "offsetY": -40, "style": "ip-label"   },
+    { "id": "lbl-dest",  "text": "DEST: 10.40.1.10",    "attachToNode": "node-spawn", "offsetY": -58, "style": "ip-label"   },
+    { "id": "lbl-port",  "text": "PORT: 443 (HTTPS)",   "attachToNode": "node-spawn", "offsetY": -76, "style": "port-label" },
+    { "id": "lbl-fw",    "text": "ALLOWS: 443 only",    "attachToNode": "node-fw443", "offsetY": -40, "style": "rule-text"  },
+    { "id": "lbl-skip",  "text": "SKIP CERT?",          "attachToNode": "node-skip",  "offsetY": -40, "style": "rule-text"  }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "tls",
+      "triggerNode": "node-spawn",
+      "headline": "TLS",
+      "body": "TLS (Transport Layer Security) encrypts data in transit. Without it, every router between you and the server can read your traffic. With it, only the server holding the right private key can decrypt what you send. All HTTPS connections use TLS.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "tls-client-hello",
+      "triggerNode": "node-ch",
+      "headline": "ClientHello",
+      "body": "ClientHello opens the TLS handshake. You tell the server which cipher suites you support and send a random value. The server will respond with its choice and its certificate. The handshake must follow this order - a server cannot prove its identity before it even knows you are there.",
+      "highlightNodeId": "node-ch"
+    },
+    {
+      "termKey": "tls-certificate",
+      "triggerNode": "node-sc",
+      "headline": "Server Certificate",
+      "body": "The server sends its certificate - a signed document proving its identity. Your device checks the signature against Certificate Authorities it trusts. Is the cert for the right domain? Has it expired? Is it signed by a trusted CA? Skipping this step means accepting a connection from anyone, including an attacker.",
+      "highlightNodeId": "node-sc"
+    },
+    {
+      "termKey": "tls-established",
+      "triggerNode": "node-cs",
+      "headline": "TLS Established",
+      "body": "ChangeCipherSpec signals that both sides have derived the same session keys from the handshake data. From this point, all traffic is encrypted. The server will now accept your application data - not as plain text, but as a ciphertext only it can read.",
+      "highlightNodeId": "node-cs"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-r1", "node-fw443", "node-ch", "node-sc", "node-cs", "node-dest"]
+}

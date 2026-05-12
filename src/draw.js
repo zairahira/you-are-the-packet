@@ -7,6 +7,8 @@ const NODE_COLORS = {
   'dns-resolver': '#dbb8ff',
   'nat-gateway':  '#f1be32',
   'tcp-node':     '#99c9ff',
+  'dhcp-server':  '#f1be32',
+  'tls-node':     '#dbb8ff',
   exit:           '#4a4a6a',
   destination:    '#acd157',
 }
@@ -18,6 +20,8 @@ const NODE_ICONS = {
   'dns-resolver': 'DNS',
   'nat-gateway':  'NAT',
   'tcp-node':     'TCP',
+  'dhcp-server':  'DHCP',
+  'tls-node':     'TLS',
   exit:           '?',
   destination:    'SRV',
 }
