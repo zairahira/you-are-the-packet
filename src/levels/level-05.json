@@ -4,6 +4,8 @@
   "concept": "dns",
   "theory": {
     "title": "DNS: The Internet's Phone Book",
+    "plainObjective": "You know your destination by name but not by address. Visit the DNS resolver first to get the IP, then navigate to the server.",
+    "summary": "DNS is the first thing that happens when you visit any website. Before a single byte of content loads, your device asks a DNS resolver for the IP behind the domain name - exactly what you just did.",
     "bodyParagraphs": [
       {
         "heading": "Names vs addresses",
@@ -41,7 +43,7 @@
     },
     {
       "id": "node-r1",    "type": "router",       "col": 7, "row": 4,
-      "label": "R1", "checkpoint": true,
+      "label": "R1",
       "routingTable": [
         { "prefix": "10.0.2.0/24", "nextHop": "node-dest", "interface": "eth0" }
       ]

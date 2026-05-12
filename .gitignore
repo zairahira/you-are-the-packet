@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 prompts
+
+CLAUDE.md
+context/level-design.md

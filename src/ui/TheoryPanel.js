@@ -32,7 +32,11 @@ export default class TheoryPanel {
     this._onContinue = onContinue
     const { theory, id, player } = levelData
     const destIP = player?.destIP
-    const srcIP = player?.srcIP
+    const srcIP  = player?.srcIP
+
+    const objectiveHtml = theory.plainObjective
+      ? `<div class="theory-objective">${_highlightIPs(theory.plainObjective, srcIP, destIP)}</div>`
+      : ''
 
     const conceptHtml = theory.bodyParagraphs
       ? theory.bodyParagraphs.map(p => `
@@ -40,7 +44,7 @@ export default class TheoryPanel {
             ${p.heading ? `<div class="theory-para-heading">${p.heading}</div>` : ''}
             <p class="theory-body-p">${p.text}</p>
           </div>`).join('')
-      : `<p class="theory-body-p">${theory.body}</p>`
+      : (theory.body ? `<p class="theory-body-p">${theory.body}</p>` : '')
 
     const missionHtml = theory.mission
       ? theory.mission
@@ -68,25 +72,78 @@ export default class TheoryPanel {
         </div>`
     }).join('')
 
+    const isMidGame = onContinue === null
+    const btnLabel  = isMidGame ? 'Got it' : 'Start Level'
+    const btnId     = 'btn-theory-continue'
+
     this._el.innerHTML = `
       <div class="theory-tag">LEVEL ${id}</div>
       <div class="theory-title">${theory.title}</div>
 
-      <div class="theory-section-label">Concept</div>
-      <div class="theory-body">${conceptHtml}</div>
+      ${objectiveHtml ? `<div class="theory-section-label">Objective</div>${objectiveHtml}` : ''}
 
-      ${missionHtml ? `<div class="theory-section-label">Your Mission</div><div class="theory-body">${missionHtml}</div>` : ''}
+      ${conceptHtml ? `
+        <details class="theory-concept-details"${isMidGame ? '' : ' open'}>
+          <summary class="theory-section-label theory-concept-toggle">Concept <span class="concept-arrow">&#9654;</span></summary>
+          <div class="theory-body">${conceptHtml}</div>
+          ${missionHtml ? `<div class="theory-section-label" style="margin-top:12px">Before You Begin</div><div class="theory-body">${missionHtml}</div>` : ''}
+        </details>
+      ` : ''}
 
       ${tablesHtml ? `<div class="theory-section-label">Routing Tables</div>${tablesHtml}` : ''}
 
-      <button class="btn-primary" id="btn-theory-continue">Start Level</button>
+      <button class="btn-primary" id="${btnId}">${btnLabel}</button>
     `
 
-    document.getElementById('btn-theory-continue').addEventListener('click', () => {
-      const btn = document.getElementById('btn-theory-continue')
-      if (btn) { btn.disabled = true; btn.style.opacity = '0.5' }
-      this._onContinue?.()
+    document.getElementById(btnId).addEventListener('click', () => {
+      if (isMidGame) {
+        this._el.innerHTML = ''
+        this._renderIdleState(levelData)
+      } else {
+        this._onContinue?.()
+        this._renderIdleState(levelData)
+      }
     }, { once: true })
+  }
+
+  showMidGame(levelData) {
+    this.show(levelData, null)
+  }
+
+  _renderIdleState(levelData) {
+    const { theory, id, player } = levelData
+    const destIP = player?.destIP
+    const srcIP  = player?.srcIP
+
+    const objectiveHtml = theory.plainObjective
+      ? `<div class="theory-objective">${_highlightIPs(theory.plainObjective, srcIP, destIP)}</div>`
+      : ''
+
+    const routerNodes = (levelData.nodes || []).filter(n => n.routingTable?.length)
+    const tablesHtml = routerNodes.map(node => {
+      const matchPrefix = destIP ? _bestMatchPrefix(destIP, node.routingTable) : null
+      const rows = node.routingTable.map(r => {
+        const isMatch = r.prefix === matchPrefix
+        return `<tr data-prefix="${r.prefix}"${isMatch ? ' class="rt-match"' : ''}>
+          <td>${r.prefix}</td><td>${r.interface}</td>
+        </tr>`
+      }).join('')
+      return `
+        <div class="theory-router">
+          <div class="theory-router-name">Router ${node.label || node.id}</div>
+          <table class="rt-table" data-node-id="${node.id}">
+            <thead><tr><th>PREFIX</th><th>IFACE</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`
+    }).join('')
+
+    this._el.innerHTML = `
+      <div class="theory-tag">LEVEL ${id}</div>
+      <div class="theory-title">${theory.title}</div>
+      ${objectiveHtml ? `<div class="theory-section-label">Objective</div>${objectiveHtml}` : ''}
+      ${tablesHtml ? `<div class="theory-section-label">Routing Tables</div>${tablesHtml}` : ''}
+    `
   }
 
   highlight(nodeId, prefix) {

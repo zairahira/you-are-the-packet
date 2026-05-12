@@ -9,12 +9,13 @@ import { setupCanvas, drawWorld } from '../draw.js'
 import HUD                 from '../ui/hud.js'
 import Callout             from '../ui/callout.js'
 import TheoryPanel         from '../ui/TheoryPanel.js'
+import BlockedNotice       from '../ui/BlockedNotice.js'
 
 let _canvas, _ctx, _canvasW, _canvasH
 let _levelData, _levelState, _packet
 let _levelLoader
 let _routingEngine, _firewallChecker, _checkpointSystem, _termTracker
-let _hud, _callout, _theoryPanel
+let _hud, _callout, _theoryPanel, _blockedNotice
 let _rafId       = null
 let _lastTime    = 0
 let _ro          = null
@@ -23,11 +24,19 @@ let _running     = false
 let _onExit      = null
 
 export function initGame(onExit) {
-  _canvas      = document.getElementById('game-canvas')
-  _hud         = new HUD()
-  _callout     = new Callout()
-  _theoryPanel = new TheoryPanel()
-  _onExit      = onExit
+  _canvas        = document.getElementById('game-canvas')
+  _hud           = new HUD()
+  _callout       = new Callout()
+  _theoryPanel   = new TheoryPanel()
+  _blockedNotice = new BlockedNotice()
+  _onExit        = onExit
+
+  const helpBtn = document.getElementById('btn-help')
+  if (helpBtn) {
+    helpBtn.addEventListener('click', () => {
+      if (_levelData?.theory) _theoryPanel.showMidGame(_levelData)
+    })
+  }
 }
 
 export function startLevel(levelId) {
@@ -50,11 +59,16 @@ export function startLevel(levelId) {
   _checkpointSystem.init(_packet)
 
   _hud.init(_levelData, _packet)
+  _blockedNotice.hide()
+
+  const helpBtn = document.getElementById('btn-help')
+  if (helpBtn) helpBtn.style.display = 'none'
 
   if (_levelData.theory) {
     _packet.inputLocked = true
     _theoryPanel.show(_levelData, () => {
       _packet.inputLocked = false
+      if (helpBtn) helpBtn.style.display = 'block'
       _firePendingIntros(_levelState.playerStartNode)
     })
   } else {
@@ -82,6 +96,9 @@ export function stopGame() {
   _hud?.clear()
   _callout?.hide()
   _theoryPanel?.hide()
+  _blockedNotice?.hide()
+  const helpBtn = document.getElementById('btn-help')
+  if (helpBtn) helpBtn.style.display = 'none'
 }
 
 function _teardown() {
@@ -128,6 +145,7 @@ function _onKey(e) {
   // Drop rate check
   const edge = _levelState.getEdge(_packet.currentNodeId, targetNode.id)
   if (edge && (edge.dropRate || 0) >= 1) {
+    _blockedNotice.show('Link unstable - packet dropped. Try another route.')
     _packet.playBlocked()
     _checkpointSystem.respawn(_packet)
     _hud.update(_packet)
@@ -139,6 +157,9 @@ function _onKey(e) {
   if (targetNode.type === 'firewall' && targetNode.firewallRules?.length) {
     const result = _firewallChecker.check(_packet, targetNode)
     if (!result.allowed) {
+      const allowed = targetNode.firewallRules.filter(r => r.action === 'allow').map(r => r.port).join(', ')
+      const carrying = _packet.portTag || 'unknown'
+      _blockedNotice.show(`BLOCKED - Firewall allows port ${allowed || '?'} only. You carry port ${carrying}.`)
       _theoryPanel.highlight(targetNode.id, result.blockingRule?.prefix)
       _packet.playBlocked()
       _checkpointSystem.respawn(_packet)
@@ -151,6 +172,8 @@ function _onKey(e) {
   // TCP node check
   if (targetNode.type === 'tcp-node') {
     if (!_checkTcpTransition(_packet.tcpState, targetNode.tcpStep)) {
+      const needed = _tcpPreviousStep(targetNode.tcpStep)
+      _blockedNotice.show(`Can't send ${targetNode.tcpStep?.toUpperCase()} yet - complete ${needed} first.`)
       _packet.playBlocked()
       _checkpointSystem.respawn(_packet)
       _hud.update(_packet)
@@ -160,6 +183,7 @@ function _onKey(e) {
   }
   if (targetNode.type === 'destination' && targetNode.requiresTcpState) {
     if (_packet.tcpState !== targetNode.requiresTcpState) {
+      _blockedNotice.show(`Server requires an ESTABLISHED connection. Complete the handshake first.`)
       _packet.playBlocked()
       _checkpointSystem.respawn(_packet)
       _hud.update(_packet)
@@ -172,6 +196,7 @@ function _onKey(e) {
   if (fromNode.type === 'router' && fromNode.routingTable?.length) {
     const result = _routingEngine.validateMove(_packet, fromNode, targetNode)
     if (!result.valid) {
+      _blockedNotice.show(`Wrong exit - ${_packet.destIP} doesn't match this route. Check the routing table.`)
       _theoryPanel.highlight(fromNode.id, result.matchedRoute?.prefix)
       _packet.playBlocked()
       _checkpointSystem.respawn(_packet)
@@ -210,6 +235,12 @@ function _checkTcpTransition(state, tcpStep) {
   return true
 }
 
+function _tcpPreviousStep(tcpStep) {
+  if (tcpStep === 'syn-ack') return 'SYN'
+  if (tcpStep === 'ack')     return 'SYN-ACK'
+  return 'the previous step'
+}
+
 function _firePendingIntros(node) {
   const intros = _levelData.termIntroductions?.filter(t => t.triggerNode === node.id) || []
   intros.forEach(term => {
@@ -224,6 +255,7 @@ function _firePendingIntros(node) {
 
 function _onLevelComplete() {
   _packet.playSuccess()
+  _callout.hide()
   try {
     const p = JSON.parse(localStorage.getItem('yatp_progress') || '{}')
     p[_levelData.id] = true
@@ -267,9 +299,15 @@ function _showTransition(levelId, title, nextId) {
     ? `<button class="btn-primary" id="btn-next">Next Level &rarr;</button>`
     : `<button class="btn-primary" id="btn-menu-t">Back to Menu</button>`
 
+  const summary = _levelData?.theory?.summary
+  const summaryHtml = summary
+    ? `<p class="modal-summary">${summary}</p>`
+    : ''
+
   _showModal(`
     <div class="modal-badge">PACKET DELIVERED</div>
     <p class="modal-sub">Level ${levelId}: ${title}</p>
+    ${summaryHtml}
     ${nextBtn}
     <button class="btn-ghost" id="btn-menu-t2">Main Menu</button>
   `)

@@ -258,12 +258,61 @@
       font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
     }
 
-    /* ── Canvas ── */
+    /* ── Canvas wrapper ── */
+    #canvas-wrap {
+      flex: 1;
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+    }
+
     #game-canvas {
       flex: 1;
       display: block;
       min-width: 0;
       min-height: 0;
+    }
+
+    /* ── Help (?) button ── */
+    #btn-help {
+      display: none;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      background: #2a2a40;
+      border: 1px solid #dbb8ff;
+      color: #dbb8ff;
+      font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 50;
+      line-height: 1;
+      padding: 0;
+    }
+    #btn-help:hover { background: #3b3b5a; }
+
+    /* ── Blocked notice toast ── */
+    #blocked-notice {
+      display: none;
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 93, 93, 0.15);
+      border: 1px solid #ffadad;
+      color: #ffadad;
+      font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.8rem;
+      padding: 10px 20px;
+      max-width: 420px;
+      text-align: center;
+      z-index: 50;
+      pointer-events: none;
+      transition: opacity 0.4s;
     }
 
     /* ── Term callout ── */
@@ -275,7 +324,7 @@
       padding: 18px 20px;
       max-width: 340px;
       z-index: 100;
-      pointer-events: none;
+      cursor: pointer;
     }
 
     .callout-headline {
@@ -312,8 +361,9 @@
     .modal-panel {
       background: #2a2a40;
       border: 1px solid #3b3b4f;
-      padding: 40px 48px;
-      min-width: 300px;
+      padding: 32px 40px;
+      width: 480px;
+      max-width: calc(100vw - 48px);
       text-align: center;
       display: flex;
       flex-direction: column;
@@ -336,6 +386,56 @@
     .modal-sub {
       font-size: 0.85rem;
       color: #858591;
+    }
+
+    .modal-summary {
+      font-size: 0.82rem;
+      color: #d0d0d5;
+      line-height: 1.65;
+      margin: 0;
+      padding: 14px 16px;
+      border-left: 2px solid #dbb8ff;
+      text-align: left;
+      background: rgba(219, 184, 255, 0.06);
+    }
+
+    /* ── Theory panel extras ── */
+    .theory-objective {
+      font-size: 0.95rem;
+      color: #f5f6f7;
+      line-height: 1.6;
+      padding: 12px 14px;
+      background: rgba(172, 209, 87, 0.08);
+      border-left: 3px solid #acd157;
+    }
+
+    .theory-concept-details {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .theory-concept-toggle {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+    .theory-concept-toggle::-webkit-details-marker { display: none; }
+
+    .concept-arrow {
+      font-size: 0.6rem;
+      color: #858591;
+      transition: transform 0.15s;
+    }
+    details[open] .concept-arrow {
+      transform: rotate(90deg);
+    }
+
+    .theory-concept-details .theory-body {
+      padding-left: 4px;
     }
 
     /* ── Buttons ── */
@@ -385,7 +485,11 @@
     </div>
     <div id="game-body">
       <div id="theory-panel"></div>
-      <canvas id="game-canvas"></canvas>
+      <div id="canvas-wrap">
+        <canvas id="game-canvas"></canvas>
+        <button id="btn-help" title="Show level info">?</button>
+        <div id="blocked-notice"></div>
+      </div>
     </div>
   </div>
 

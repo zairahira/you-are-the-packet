@@ -4,10 +4,12 @@
   "concept": "multiple-hops",
   "theory": {
     "title": "Hops: One Router at a Time",
+    "plainObjective": "Navigate through two routers in a chain - each one makes its own independent decision about where to send you.",
+    "summary": "Every message you send online crosses many routers like this. Each one reads only the destination address and forwards the packet without knowing the full path ahead.",
     "bodyParagraphs": [
       {
-        "heading": "Hop-by-hop routing",
-        "text": "Each router you pass through counts as one hop. At every hop, that router reads your destination IP and consults its own routing table - completely independent of every other router on the path. Routers do not coordinate with each other; each one makes a local decision."
+        "heading": "Each router decides independently",
+        "text": "Each router you pass through counts as one hop. At every hop, that router reads your destination IP and consults its own routing table - completely independent of every other router on the path. Routers do not coordinate with each other; each one makes a local decision based only on what it knows."
       },
       {
         "heading": "Time to Live (TTL)",

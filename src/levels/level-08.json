@@ -4,6 +4,8 @@
   "concept": "nat",
   "theory": {
     "title": "NAT: One Address for Many",
+    "plainObjective": "Your private IP can't be routed on the internet. Cross the NAT gateway to get a public IP, then deliver your packet.",
+    "summary": "NAT is running right now on your home router. Your laptop, phone, and every device at home share a single public IP - and your router silently translates every packet in and out, invisibly.",
     "bodyParagraphs": [
       {
         "heading": "Why private IPs exist",

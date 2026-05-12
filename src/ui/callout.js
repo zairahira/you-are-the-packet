@@ -2,7 +2,6 @@ export default class Callout {
   constructor() {
     this.isVisible = false
     this._el       = document.getElementById('callout')
-    this._timer    = null
   }
 
   show(termData, canvasRect, worldPos) {
@@ -25,20 +24,19 @@ export default class Callout {
     this._el.innerHTML = `
       <div class="callout-headline">${termData.headline}</div>
       <div class="callout-body">${termData.body}</div>
-      <div class="callout-dismiss">[space] to dismiss</div>
+      <div class="callout-dismiss">Press [space] or click to continue</div>
     `
     this._el.style.left    = `${Math.round(left)}px`
     this._el.style.top     = `${Math.round(top)}px`
     this._el.style.display = 'block'
 
-    if (this._timer) clearTimeout(this._timer)
-    this._timer = setTimeout(() => this.hide(), 6000)
+    this._el.onclick = () => this.hide()
   }
 
   hide() {
     if (!this._el) return
     this.isVisible         = false
     this._el.style.display = 'none'
-    if (this._timer) { clearTimeout(this._timer); this._timer = null }
+    this._el.onclick       = null
   }
 }

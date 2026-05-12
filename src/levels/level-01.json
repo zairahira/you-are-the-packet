@@ -4,6 +4,8 @@
   "concept": "basic-routing",
   "theory": {
     "title": "How Packets Find Their Way",
+    "plainObjective": "Get your packet from Start to the Server by choosing the right path at router R1.",
+    "summary": "Every router on the internet does exactly this: looks up the destination IP in a table and picks an exit port. This decision happens billions of times per second, invisibly, for every message you send.",
     "bodyParagraphs": [
       {
         "heading": "Why does a routing table exist?",

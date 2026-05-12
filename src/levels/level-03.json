@@ -4,10 +4,12 @@
   "concept": "subnet-prefix-match",
   "theory": {
     "title": "The Most Specific Route Wins",
+    "plainObjective": "Three routes all match your destination. Pick the most specific one - the route with the highest prefix number.",
+    "summary": "Longest-prefix match is one of the most fundamental rules in real networking. Every router on the internet uses it to choose between overlapping routes, millions of times per second.",
     "bodyParagraphs": [
       {
-        "heading": "Longest prefix match",
-        "text": "When a destination IP matches more than one routing table row, the router uses the longest prefix match rule - it always picks the most specific route."
+        "heading": "When multiple rows match - which wins?",
+        "text": "When a destination IP matches more than one routing table row, the router uses the longest prefix match rule: it always picks the most specific route. A longer prefix length means fewer addresses are covered, so it's a more targeted match."
       },
       {
         "heading": "Prefix lengths and specificity",

@@ -4,6 +4,8 @@
   "concept": "ports-and-firewalls",
   "theory": {
     "title": "Firewalls and Ports",
+    "plainObjective": "You carry HTTP traffic on port 80. Choose the firewall gate that allows port 80 through.",
+    "summary": "Every server on the internet sits behind a firewall with rules like these. When your browser connects to a website, the request only gets through because port 80 or 443 is explicitly allowed.",
     "bodyParagraphs": [
       {
         "heading": "What is a port?",

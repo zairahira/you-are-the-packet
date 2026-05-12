@@ -4,6 +4,8 @@
   "concept": "packet-loss",
   "theory": {
     "title": "When Packets Get Lost",
+    "plainObjective": "One path drops every packet. Find the stable alternate route to get through.",
+    "summary": "Network redundancy is why the internet is resilient. Real backbone networks have dozens of alternate paths, and routing protocols automatically reroute traffic around failures - often within seconds.",
     "bodyParagraphs": [
       {
         "heading": "Networks drop packets",

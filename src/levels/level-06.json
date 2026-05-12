@@ -4,6 +4,8 @@
   "concept": "tcp-handshake",
   "theory": {
     "title": "TCP: The Three-Way Handshake",
+    "plainObjective": "Complete the three-step handshake in order - SYN, then SYN-ACK, then ACK - before the server will accept your packet.",
+    "summary": "This three-message exchange happens in the background every time you open a website, send an email, or load any page over TCP - which is almost everything on the internet.",
     "bodyParagraphs": [
       {
         "heading": "Why does TCP exist?",
