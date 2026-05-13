@@ -1,15 +1,18 @@
 {
-  "id": 6,
-  "title": "The Handshake",
+  "id": 11,
+  "title": "Shake on It",
   "concept": "tcp-handshake",
   "theory": {
     "title": "TCP: The Three-Way Handshake",
-    "plainObjective": "Complete the three-step handshake in order - SYN, then SYN-ACK, then ACK - before the server will accept your packet.",
+    "buildsOn": ["routing-table", "firewall", "ports-and-firewalls"],
+    "recap": "You've routed by destination IP, passed firewalls by port number, and even chosen between healthy backends. But none of that has involved talking to the server. TCP is the moment the packet stops being addressed-and-forwarded and starts being part of a real conversation - one that has to begin with a formal handshake.",
+    "newConcept": "tcp-handshake",
+    "plainObjective": "Route to the firewall, pass on port 80, then complete the three-step handshake in order: SYN, SYN-ACK, ACK.",
     "summary": "This three-message exchange happens in the background every time you open a website, send an email, or load any page over TCP - which is almost everything on the internet.",
     "bodyParagraphs": [
       {
         "heading": "Why does TCP exist?",
-        "text": "IP delivers packets but makes no guarantees - packets can be lost, reordered, or duplicated. TCP adds reliability. Before any data flows, both sides must agree to talk. That agreement is the three-way handshake."
+        "text": "IP delivers packets but makes no guarantees - they can be lost, reordered, or duplicated. TCP adds reliability on top. Before any data flows, both sides must agree to talk. That agreement is the three-way handshake."
       },
       {
         "heading": "The three steps",
@@ -18,11 +21,15 @@
       {
         "heading": "Why can't you skip steps?",
         "text": "Each step confirms that both sides can send and receive. Sending ACK before receiving SYN-ACK would mean acknowledging something you never saw. TCP rejects out-of-order steps to prevent broken connections."
+      },
+      {
+        "heading": "Handshake sits on routing",
+        "text": "Notice that you don't reach the SYN node until you've cleared R1 and the firewall. TCP runs on top of IP and ports - the routing and filtering you've practised always happens first. The handshake is a layer above."
       }
     ],
-    "mission": "You need an ESTABLISHED connection before the server will accept your packet. Follow the handshake in order: SYN, then SYN-ACK, then ACK. There is a shortcut above SYN - try it and see what happens."
+    "mission": "You carry port 80, destined for 10.0.2.40.\n\nRoute through R1, pass the firewall, then begin the handshake at SYN. The shortcut above tries to skip SYN-ACK - try it and watch TCP reject the out-of-order step."
   },
-  "gridWidth": 11,
+  "gridWidth": 13,
   "gridHeight": 8,
   "tileSize": 64,
   "player": {
@@ -34,25 +41,46 @@
   },
   "destination": { "nodeId": "node-dest", "label": "Server" },
   "nodes": [
-    { "id": "node-spawn",    "type": "spawn",       "col": 1,  "row": 4 },
-    { "id": "node-syn",      "type": "tcp-node",    "col": 3,  "row": 4, "checkpoint": true, "tcpStep": "syn",     "label": "1. SYN" },
-    { "id": "node-ack-dead", "type": "tcp-node",    "col": 3,  "row": 2, "tcpStep": "ack",   "label": "ACK?" },
-    { "id": "node-synack",   "type": "tcp-node",    "col": 5,  "row": 4, "tcpStep": "syn-ack","label": "2. SYN-ACK"},
-    { "id": "node-ack",      "type": "tcp-node",    "col": 8,  "row": 4, "checkpoint": true, "tcpStep": "ack",     "label": "3. ACK" },
-    { "id": "node-dest",     "type": "destination", "col": 10, "row": 4, "requiresTcpState": "ESTABLISHED", "label": "Server" }
+    { "id": "node-spawn", "type": "spawn",       "col": 1, "row": 4 },
+    {
+      "id": "node-r1",    "type": "router",      "col": 3, "row": 4,
+      "label": "R1", "checkpoint": true,
+      "routingTable": [
+        { "prefix": "10.0.2.0/24", "nextHop": "node-fw",     "interface": "eth0" },
+        { "prefix": "10.0.0.0/16", "nextHop": "node-dead-16","interface": "eth1" }
+      ]
+    },
+    { "id": "node-dead-16", "type": "exit",      "col": 3, "row": 6, "label": "10.0.0.0/16" },
+    {
+      "id": "node-fw",      "type": "firewall",  "col": 5, "row": 4, "label": "FW :80",
+      "firewallRules": [
+        { "port": 80,  "protocol": "*", "action": "allow" },
+        { "port": "*", "protocol": "*", "action": "deny" }
+      ]
+    },
+    { "id": "node-syn",      "type": "tcp-node",    "col": 7,  "row": 4, "checkpoint": true, "tcpStep": "syn",     "label": "1. SYN" },
+    { "id": "node-ack-dead", "type": "tcp-node",    "col": 7,  "row": 2, "tcpStep": "ack",   "label": "ACK?" },
+    { "id": "node-synack",   "type": "tcp-node",    "col": 9,  "row": 4, "tcpStep": "syn-ack","label": "2. SYN-ACK"},
+    { "id": "node-ack",      "type": "tcp-node",    "col": 11, "row": 4, "checkpoint": true, "tcpStep": "ack",     "label": "3. ACK" },
+    { "id": "node-dest",     "type": "destination", "col": 12, "row": 4, "requiresTcpState": "ESTABLISHED", "label": "Server" }
   ],
   "edges": [
-    { "from": "node-spawn",    "to": "node-syn",    "directed": false, "dropRate": 0 },
-    { "from": "node-syn",      "to": "node-ack-dead","directed": false, "dropRate": 0 },
-    { "from": "node-syn",      "to": "node-synack", "directed": false, "dropRate": 0 },
-    { "from": "node-synack",   "to": "node-ack",    "directed": false, "dropRate": 0 },
-    { "from": "node-ack",      "to": "node-dest",   "directed": false, "dropRate": 0 }
+    { "from": "node-spawn", "to": "node-r1",        "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-fw",        "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-dead-16",   "directed": false, "dropRate": 0 },
+    { "from": "node-fw",    "to": "node-syn",       "directed": false, "dropRate": 0 },
+    { "from": "node-syn",   "to": "node-ack-dead",  "directed": false, "dropRate": 0 },
+    { "from": "node-syn",   "to": "node-synack",    "directed": false, "dropRate": 0 },
+    { "from": "node-synack","to": "node-ack",       "directed": false, "dropRate": 0 },
+    { "from": "node-ack",   "to": "node-dest",      "directed": false, "dropRate": 0 }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",   "text": "YOU: 10.0.1.5",   "attachToNode": "node-spawn",    "offsetY": -40, "style": "ip-label"  },
-    { "id": "lbl-dest",  "text": "DEST: 10.0.2.40", "attachToNode": "node-dest",     "offsetY": -40, "style": "ip-label"  },
-    { "id": "lbl-skip",  "text": "SKIP SYN-ACK?",   "attachToNode": "node-ack-dead", "offsetY": -40, "style": "rule-text" }
+    { "id": "lbl-src",  "text": "YOU: 10.0.1.5",   "attachToNode": "node-spawn",    "offsetY": -40, "style": "ip-label"  },
+    { "id": "lbl-port", "text": "PORT: 80",         "attachToNode": "node-spawn",    "offsetY": -58, "style": "port-label"},
+    { "id": "lbl-dest", "text": "DEST: 10.0.2.40",  "attachToNode": "node-dest",     "offsetY": -40, "style": "ip-label"  },
+    { "id": "lbl-fw",   "text": "ALLOWS: 80",       "attachToNode": "node-fw",       "offsetY": -40, "style": "rule-text" },
+    { "id": "lbl-skip", "text": "SKIP SYN-ACK?",    "attachToNode": "node-ack-dead", "offsetY": -40, "style": "rule-text" }
   ],
   "termIntroductions": [
     {
@@ -86,5 +114,5 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-syn", "node-synack", "node-ack", "node-dest"]
+  "correctPath": ["node-spawn", "node-r1", "node-fw", "node-syn", "node-synack", "node-ack", "node-dest"]
 }

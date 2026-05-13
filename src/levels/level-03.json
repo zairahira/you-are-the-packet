@@ -4,6 +4,9 @@
   "concept": "subnet-prefix-match",
   "theory": {
     "title": "The Most Specific Route Wins",
+    "buildsOn": ["routing-table", "multi-hop"],
+    "recap": "You've read routing tables one row at a time, picking the row whose prefix covers your destination. Here, multiple rows match - so routers add a tie-breaker rule: pick the most specific one.",
+    "newConcept": "longest-prefix-match",
     "plainObjective": "Three routes all match your destination. Pick the most specific one - the route with the highest prefix number.",
     "summary": "Longest-prefix match is one of the most fundamental rules in real networking. Every router on the internet uses it to choose between overlapping routes, millions of times per second.",
     "bodyParagraphs": [

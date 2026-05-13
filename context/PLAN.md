@@ -261,18 +261,45 @@ On failure, `RuleHighlight` tints the matching row `ACCENT_YELLOW` for 3 seconds
 
 ## Level-by-Level Design
 
-| # | Concept | Key mechanic | Terms introduced |
-|---|---------|-------------|-----------------|
-| 1 | Basic routing | 1 router, 2 exits, pick matching subnet | routing table |
-| 2 | Multiple hops | Router chain, read each table | hop, TTL (flavor) |
-| 3 | Subnets | Longest-prefix match, overlapping ranges | subnet mask, CIDR |
-| 4 | Ports & services | Firewall wall, port-tagged doors | port, firewall, HTTP |
-| 5 | DNS | Find resolver first, then route | DNS, resolver, A record |
-| 6 | TCP handshake | 3-beat SYN/SYN-ACK/ACK ritual | TCP, SYN, handshake |
-| 7 | Packet loss | Dropping links, find redundant path | packet loss, redundancy |
-| 8 | NAT | IP rewrite at gateway | NAT, private/public IP, RFC 1918 |
+The curriculum follows the **packet life cycle** in four acts, with a **Spiral Principle**: every level past L3 reuses at least one prior mechanic as a warm-up before introducing its new one. Levels also carry a `theory.buildsOn` array and a one-paragraph `theory.recap` so the player sees prior concepts before the new one is taught.
+
+### Act I - Streets and Addresses (pure routing)
+| # | Concept | Key mechanic | New terms |
+|---|---------|-------------|-----------|
+| 1 | Basic routing | 1 router, 2 exits, pick matching subnet | IP address, routing table |
+| 2 | Multiple hops | Router chain, read each table | TTL, hop |
+| 3 | Longest prefix | Three overlapping prefixes at one router | CIDR, longest-prefix match |
+
+### Act II - Who Am I, Where Am I Going? (identity)
+| # | Concept | Key mechanic | New terms |
+|---|---------|-------------|-----------|
+| 4 | DHCP | Null srcIP, DHCP node assigns, then route through 2-router LPM chain | DHCP, scope, lease |
+| 5 | DNS | Null destIP, domain name, DNS resolves, then route through LPM table | domain name, DNS, A record |
+| 6 | NAT | Private srcIP + domain destIP: DNS resolves, then NAT rewrites src | private IP, NAT, public IP |
+
+### Act III - The Hostile Internet (obstacles)
+| # | Concept | Key mechanic | New terms |
+|---|---------|-------------|-----------|
+| 7 | Firewalls | Router LPM warm-up, then firewall fork on port | port, firewall, HTTP |
+| 8 | Packet loss | Router + 3-way fork (firewall-denied, drop-1, stable) | packet loss, redundancy |
+| 9 | VLANs | L3 switch with overlapping prefixes bridges segments | VLAN, isolation, inter-VLAN routing |
+
+### Act IV - Trust and Transit (negotiation)
+| # | Concept | Key mechanic | New terms |
+|---|---------|-------------|-----------|
+| 10 | Load balancing | Router + port-80 firewall + LB with 2 healthy + 1 failed backend | load balancer, distribution, health check |
+| 11 | TCP handshake | Router + firewall warm-up, then SYN/SYN-ACK/ACK | TCP, SYN, ESTABLISHED |
+| 12 | TLS | Router + firewall, full TCP handshake, then TLS with valid/expired/wrong-domain cert branches | TLS, ClientHello, certificate, expired cert, wrong-domain cert |
 
 **Level 1 first playable moment:** Spawn as `192.168.1.5`. One router, two exits labeled `192.168.1.0/24` and `10.0.0.0/8`. Destination `192.168.1.20`. No tutorial - just try.
+
+### Spiral Principle (enforced by content, not engine)
+Every level from L4 onward must satisfy all of:
+1. A router with a non-trivial (2+ row) routing table appears on the correctPath, in front of the new mechanic's node (exception: L4 places routers after DHCP).
+2. At least one prior-act mechanic appears as a gate on the correctPath before the new mechanic.
+3. The theory block opens with a `recap` paragraph that explicitly names what the player will redo from prior levels.
+4. `correctPath.length >= 6`.
+5. The new mechanic is never the only decision point on the correctPath.
 
 ---
 

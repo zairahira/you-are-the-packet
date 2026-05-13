@@ -1,33 +1,40 @@
 {
-  "id": 9,
+  "id": 4,
   "title": "Getting on the Network",
   "concept": "dhcp",
   "theory": {
     "title": "DHCP: Joining the Network",
-    "plainObjective": "Find the DHCP server to get an IP address - you cannot route anywhere without one.",
+    "buildsOn": ["routing-table", "longest-prefix-match"],
+    "recap": "You can read routing tables and pick the most specific route. But routers can't forward a packet that has no source address. Before you route, you need an IP - and DHCP is how every real device gets one.",
+    "newConcept": "dhcp",
+    "plainObjective": "Get an IP from the DHCP server, then route across two routers to reach the server. Each router still uses longest-prefix match.",
     "summary": "Every device on every network - your phone, laptop, smart TV - silently runs this same exchange in the background every time it connects.",
     "bodyParagraphs": [
       {
         "heading": "You have no address",
-        "text": "When a device first connects to a network, it has no IP address. It cannot send routed traffic until one is assigned. Typing a static IP works but does not scale to thousands of devices. DHCP automates the process."
+        "text": "When a device first connects to a network, it has no IP. It cannot send routed traffic until one is assigned. Typing a static IP works but does not scale to thousands of devices. DHCP automates the process."
       },
       {
         "heading": "What DHCP assigns",
-        "text": "A DHCP server holds a pool of available addresses called a scope. When a new device appears, the server offers an address from the pool along with the subnet mask (which addresses are local), the default gateway (where to send non-local traffic), and the DNS server (who to ask for name resolution). Four things, one exchange."
+        "text": "A DHCP server holds a pool of available addresses called a scope. When a new device appears, the server offers an address from the pool along with the subnet mask, default gateway, and DNS server. Four things, one exchange."
       },
       {
         "heading": "The DORA exchange",
-        "text": "The full process is four messages: Discover (client broadcasts 'is there a DHCP server?'), Offer (server replies with an available address), Request (client formally asks for that address), Acknowledge (server confirms the lease). All four happen in milliseconds when you join a Wi-Fi network."
+        "text": "The full process is four messages: Discover (client broadcasts 'is there a DHCP server?'), Offer (server replies with an available address), Request (client formally asks for it), Acknowledge (server confirms the lease). All four happen in milliseconds when you join a Wi-Fi network."
       },
       {
         "heading": "Leases, not ownership",
-        "text": "DHCP addresses are leased for a limited time - typically hours or days. When the lease expires, the address returns to the pool unless renewed. This is why a device can appear with a different IP after a long outage, and why your home IP rarely changes while you stay connected."
+        "text": "DHCP addresses are leased for a limited time. When the lease expires the address returns to the pool unless renewed. This is why your home IP can change after a long outage but rarely while you stay connected."
+      },
+      {
+        "heading": "After DHCP - back to routing",
+        "text": "Once you have an IP, routers will accept you. R1 here has two routes; R2 has two more. Both still use longest-prefix match. The packet's life always loops back to the routing fundamentals from Act I."
       }
     ],
-    "mission": "You have no source IP - you are invisible to routers. Find the DHCP server and claim an address. Once assigned, the network will know who you are and the router will forward your packet."
+    "mission": "You have no source IP - routers will refuse you. Visit the DHCP server first to claim 192.168.2.100, then route through R1 and R2 to reach 10.50.1.20.\n\nAt R1 and R2 the most specific prefix wins, just like in The Subnet Maze."
   },
-  "gridWidth": 11,
-  "gridHeight": 6,
+  "gridWidth": 13,
+  "gridHeight": 7,
   "tileSize": 64,
   "player": {
     "startNode": "node-spawn",
@@ -38,10 +45,10 @@
   },
   "destination": { "nodeId": "node-dest", "label": "app-server" },
   "nodes": [
-    { "id": "node-spawn", "type": "spawn",       "col": 1,  "row": 3 },
-    { "id": "node-jct",   "type": "exit",         "col": 4,  "row": 3 },
+    { "id": "node-spawn", "type": "spawn",       "col": 1,  "row": 4 },
+    { "id": "node-jct",   "type": "exit",         "col": 3,  "row": 4 },
     {
-      "id": "node-dhcp",  "type": "dhcp-server",  "col": 4,  "row": 1,
+      "id": "node-dhcp",  "type": "dhcp-server",  "col": 3,  "row": 2,
       "checkpoint": true,
       "dhcpConfig": {
         "assignedIP":  "192.168.2.100",
@@ -51,19 +58,35 @@
       }
     },
     {
-      "id": "node-r1",    "type": "router",        "col": 7,  "row": 3,
+      "id": "node-r1",    "type": "router",        "col": 6,  "row": 4,
       "label": "R1",
+      "checkpoint": true,
       "routingTable": [
-        { "prefix": "10.50.1.0/24", "nextHop": "node-dest", "interface": "eth0" }
+        { "prefix": "10.50.0.0/16", "nextHop": "node-r2",     "interface": "eth0" },
+        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead1",  "interface": "eth1" }
       ]
     },
-    { "id": "node-dest",  "type": "destination",  "col": 10, "row": 3, "label": "app-server" }
+    { "id": "node-dead1", "type": "exit",          "col": 6,  "row": 6, "label": "0.0.0.0/0" },
+    {
+      "id": "node-r2",    "type": "router",        "col": 9,  "row": 4,
+      "label": "R2",
+      "checkpoint": true,
+      "routingTable": [
+        { "prefix": "10.50.1.0/24", "nextHop": "node-dest",   "interface": "eth0" },
+        { "prefix": "10.50.2.0/24", "nextHop": "node-dead2",  "interface": "eth1" }
+      ]
+    },
+    { "id": "node-dead2", "type": "exit",          "col": 9,  "row": 6, "label": "10.50.2.0/24" },
+    { "id": "node-dest",  "type": "destination",   "col": 12, "row": 4, "label": "app-server" }
   ],
   "edges": [
-    { "from": "node-spawn", "to": "node-jct",  "directed": false, "dropRate": 0 },
-    { "from": "node-jct",   "to": "node-dhcp", "directed": false, "dropRate": 0 },
-    { "from": "node-jct",   "to": "node-r1",   "directed": false, "dropRate": 0 },
-    { "from": "node-r1",    "to": "node-dest", "directed": false, "dropRate": 0 }
+    { "from": "node-spawn", "to": "node-jct",   "directed": false, "dropRate": 0 },
+    { "from": "node-jct",   "to": "node-dhcp",  "directed": false, "dropRate": 0 },
+    { "from": "node-jct",   "to": "node-r1",    "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-dead1", "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-r2",    "directed": false, "dropRate": 0 },
+    { "from": "node-r2",    "to": "node-dead2", "directed": false, "dropRate": 0 },
+    { "from": "node-r2",    "to": "node-dest",  "directed": false, "dropRate": 0 }
   ],
   "firewallRules": [],
   "labels": [
@@ -77,7 +100,7 @@
       "termKey": "dhcp",
       "triggerNode": "node-spawn",
       "headline": "DHCP",
-      "body": "Your source IP is (none) - you have no address yet. DHCP (Dynamic Host Configuration Protocol) automatically assigns IP addresses to devices when they join a network. Without one, routers have no idea who you are or where to send replies.",
+      "body": "Your source IP is empty - you have no address yet. DHCP (Dynamic Host Configuration Protocol) automatically assigns IP addresses to devices when they join a network. Without one, routers have no idea who you are or where to send replies.",
       "highlightNodeId": "node-spawn"
     },
     {
@@ -91,11 +114,11 @@
       "termKey": "dhcp-lease",
       "triggerNode": "node-r1",
       "headline": "DHCP Lease",
-      "body": "Your address is not permanently yours - it is leased for a set period. When the lease expires, the address returns to the pool. Your device renews the lease automatically while connected, which is why your home IP rarely changes even though it is technically temporary.",
+      "body": "Your address is leased, not owned. The lease expires after a set period and the address returns to the pool unless renewed. Your device renews automatically while connected - that's why your home IP rarely changes even though it is technically temporary.",
       "highlightNodeId": "node-r1"
     }
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-jct", "node-dhcp", "node-jct", "node-r1", "node-dest"]
+  "correctPath": ["node-spawn", "node-jct", "node-dhcp", "node-jct", "node-r1", "node-r2", "node-dest"]
 }

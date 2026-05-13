@@ -1,16 +1,38 @@
-const LEVELS = [
-  { id: 1,  title: 'First Hop',                concept: 'Basic Routing'    },
-  { id: 2,  title: 'Chain Reaction',           concept: 'Multiple Hops'    },
-  { id: 3,  title: 'The Subnet Maze',          concept: 'Subnets & CIDR'   },
-  { id: 4,  title: 'Port of Entry',            concept: 'Ports & Firewalls'},
-  { id: 5,  title: "What's the Address?",      concept: 'DNS'              },
-  { id: 6,  title: 'Shake on It',              concept: 'TCP Handshake'    },
-  { id: 7,  title: 'Lost in Transit',          concept: 'Packet Loss'      },
-  { id: 8,  title: 'The Disguise',             concept: 'NAT'              },
-  { id: 9,  title: 'Getting on the Network',   concept: 'DHCP'             },
-  { id: 10, title: 'The Divided Campus',       concept: 'VLANs'            },
-  { id: 11, title: 'The Traffic Distributor',  concept: 'Load Balancing'   },
-  { id: 12, title: 'The Encrypted Channel',    concept: 'TLS'              },
+// Curriculum follows the packet life cycle, grouped into 4 acts.
+// IDs match the LEVELS map in src/levels/index.js and each JSON's internal `id` field.
+const ACTS = [
+  {
+    name: 'Act I - Streets and Addresses',
+    levels: [
+      { id: 1, title: 'First Hop',             concept: 'Basic Routing'      },
+      { id: 2, title: 'Chain Reaction',        concept: 'Multiple Hops'      },
+      { id: 3, title: 'The Subnet Maze',       concept: 'Longest Prefix'     },
+    ],
+  },
+  {
+    name: 'Act II - Who Am I, Where Am I Going?',
+    levels: [
+      { id: 4, title: 'Getting on the Network', concept: 'DHCP'              },
+      { id: 5, title: 'Name Resolution',        concept: 'DNS'               },
+      { id: 6, title: 'The Disguise',           concept: 'NAT'               },
+    ],
+  },
+  {
+    name: 'Act III - The Hostile Internet',
+    levels: [
+      { id: 7, title: 'Port of Entry',          concept: 'Ports & Firewalls' },
+      { id: 8, title: 'Lost in Transit',        concept: 'Packet Loss'       },
+      { id: 9, title: 'The Divided Campus',     concept: 'VLANs'             },
+    ],
+  },
+  {
+    name: 'Act IV - Trust and Transit',
+    levels: [
+      { id: 10, title: 'The Traffic Distributor', concept: 'Load Balancing'  },
+      { id: 11, title: 'Shake on It',             concept: 'TCP Handshake'   },
+      { id: 12, title: 'The Encrypted Channel',   concept: 'TLS'             },
+    ],
+  },
 ]
 
 export function mountMenu(container, onSelect) {
@@ -19,25 +41,36 @@ export function mountMenu(container, onSelect) {
   container.innerHTML = `
     <h1 class="menu-title">YOU ARE THE PACKET.</h1>
     <p class="menu-sub">Navigate the network. Deliver the message.</p>
-    <div class="level-grid" id="level-grid"></div>
+    <div id="acts-wrap"></div>
     <p class="menu-footer">Use arrow keys to navigate your packet</p>
   `
 
-  const grid = container.querySelector('#level-grid')
+  const wrap = container.querySelector('#acts-wrap')
 
-  LEVELS.forEach((lvl, i) => {
-    // level i+1 is unlocked if it's the first level, or if level i was completed
-    const unlocked = i === 0 || !!progress[i]
-    const btn = document.createElement('button')
-    btn.className = `level-card ${unlocked ? 'unlocked' : 'locked'}`
-    btn.disabled  = !unlocked
-    btn.innerHTML = `
-      <span class="card-title">${lvl.id}. ${lvl.title}</span>
-      ${!unlocked ? '<span class="card-lock">&#x1F512;</span>' : ''}
-      <span class="card-concept">${lvl.concept}</span>
+  ACTS.forEach(act => {
+    const section = document.createElement('section')
+    section.className = 'act-section'
+    section.innerHTML = `
+      <h2 class="act-title">${act.name}</h2>
+      <div class="level-grid"></div>
     `
-    if (unlocked) btn.addEventListener('click', () => onSelect(lvl.id))
-    grid.appendChild(btn)
+    const grid = section.querySelector('.level-grid')
+
+    act.levels.forEach(lvl => {
+      const unlocked = lvl.id === 1 || !!progress[lvl.id - 1]
+      const btn = document.createElement('button')
+      btn.className = `level-card ${unlocked ? 'unlocked' : 'locked'}`
+      btn.disabled  = !unlocked
+      btn.innerHTML = `
+        <span class="card-title">${lvl.id}. ${lvl.title}</span>
+        ${!unlocked ? '<span class="card-lock">&#x1F512;</span>' : ''}
+        <span class="card-concept">${lvl.concept}</span>
+      `
+      if (unlocked) btn.addEventListener('click', () => onSelect(lvl.id))
+      grid.appendChild(btn)
+    })
+
+    wrap.appendChild(section)
   })
 }
 

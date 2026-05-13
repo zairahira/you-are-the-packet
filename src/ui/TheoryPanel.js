@@ -13,6 +13,10 @@ function _bestMatchPrefix(destIP, routingTable) {
   return bestPrefix
 }
 
+function _termLabel(key) {
+  return String(key).replace(/-/g, ' ').toUpperCase()
+}
+
 function _highlightIPs(text, srcIP, destIP) {
   const escape = s => s.replace(/\./g, '\\.')
   let result = text
@@ -57,8 +61,7 @@ export default class TheoryPanel {
 
     const isMidGame = onContinue === null
 
-    // Both pre-game and mid-game show: concept → tables → mission → button
-    // Difference is only the button label and action
+    // Both pre-game and mid-game show: builds-on → recap → concept → tables → mission → button
     const conceptHtml = theory.bodyParagraphs
       ? theory.bodyParagraphs.map(p => `
           <div class="theory-para">
@@ -76,11 +79,26 @@ export default class TheoryPanel {
           .join('')
       : ''
 
+    const buildsOnHtml = (theory.buildsOn && theory.buildsOn.length)
+      ? `<div class="theory-section-label">You already know</div>
+         <div class="theory-pills">
+           ${theory.buildsOn.map(k => `<span class="theory-pill">${_termLabel(k)}</span>`).join('')}
+         </div>`
+      : ''
+
+    const recapHtml = theory.recap
+      ? `<div class="theory-section-label">Recap</div>
+         <p class="theory-recap">${_highlightIPs(theory.recap, srcIP, destIP)}</p>`
+      : ''
+
     const btnLabel = isMidGame ? 'Back to Game' : 'Start Level'
 
     this._el.innerHTML = `
       <div class="theory-tag">LEVEL ${id}</div>
       <div class="theory-title">${theory.title}</div>
+
+      ${buildsOnHtml}
+      ${recapHtml}
 
       ${conceptHtml ? `<div class="theory-section-label">Concept</div><div class="theory-body">${conceptHtml}</div>` : ''}
 

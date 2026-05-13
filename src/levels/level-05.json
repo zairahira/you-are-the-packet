@@ -4,7 +4,10 @@
   "concept": "dns",
   "theory": {
     "title": "DNS: The Internet's Phone Book",
-    "plainObjective": "You know your destination by name but not by address. Visit the DNS resolver first to get the IP, then navigate to the server.",
+    "buildsOn": ["routing-table", "longest-prefix-match", "dhcp"],
+    "recap": "Last level DHCP gave you a source IP so routers would accept you. This level you have a source IP, but your destination is a name, not an address. Routers cannot match names - you need DNS to translate first, then it's longest-prefix match all over again.",
+    "newConcept": "dns",
+    "plainObjective": "You know your destination by name but not by address. Visit the DNS resolver first to get the IP, then route through R1 using longest-prefix match.",
     "summary": "DNS is the first thing that happens when you visit any website. Before a single byte of content loads, your device asks a DNS resolver for the IP behind the domain name - exactly what you just did.",
     "bodyParagraphs": [
       {
@@ -18,12 +21,16 @@
       {
         "heading": "What happens without DNS?",
         "text": "Routers cannot forward traffic without a destination IP. If you skip the DNS resolver and head straight to R1, the routing table has nothing to match against. You must resolve the name first."
+      },
+      {
+        "heading": "After DNS - longest-prefix match",
+        "text": "Once DNS resolves the name to 10.0.2.30, R1's table has three overlapping rows that all touch it. Pick the most specific one - the rule you learned in The Subnet Maze."
       }
     ],
-    "mission": "You know your destination by name - web.fcc - but not by IP. Find the DNS resolver and get the address. Once you have it, R1's routing table will know where to send you."
+    "mission": "Your destination is the name web.fcc. Resolve it at the DNS server, then at R1 pick the most specific route to the resolved address.\n\nThree routes will match. Only one is the right answer."
   },
-  "gridWidth": 10,
-  "gridHeight": 8,
+  "gridWidth": 11,
+  "gridHeight": 7,
   "tileSize": 64,
   "player": {
     "startNode": "node-spawn",
@@ -35,26 +42,33 @@
   "destination": { "nodeId": "node-dest", "label": "web.fcc" },
   "nodes": [
     { "id": "node-spawn", "type": "spawn",        "col": 1, "row": 4 },
-    { "id": "node-jct",   "type": "exit",         "col": 4, "row": 4 },
+    { "id": "node-jct",   "type": "exit",         "col": 3, "row": 4 },
     {
-      "id": "node-dns",   "type": "dns-resolver", "col": 4, "row": 2,
+      "id": "node-dns",   "type": "dns-resolver", "col": 3, "row": 2,
       "checkpoint": true,
       "dnsRecord": { "domain": "web.fcc", "resolvedIP": "10.0.2.30", "type": "A" }
     },
     {
-      "id": "node-r1",    "type": "router",       "col": 7, "row": 4,
+      "id": "node-r1",    "type": "router",       "col": 6, "row": 4,
       "label": "R1",
+      "checkpoint": true,
       "routingTable": [
-        { "prefix": "10.0.2.0/24", "nextHop": "node-dest", "interface": "eth0" }
+        { "prefix": "10.0.2.0/24", "nextHop": "node-dest",       "interface": "eth0" },
+        { "prefix": "10.0.0.0/16", "nextHop": "node-dead-16",     "interface": "eth1" },
+        { "prefix": "0.0.0.0/0",   "nextHop": "node-dead-default","interface": "eth2" }
       ]
     },
-    { "id": "node-dest",  "type": "destination",  "col": 9, "row": 4, "label": "web.fcc" }
+    { "id": "node-dead-16",      "type": "exit",         "col": 6, "row": 6, "label": "10.0.0.0/16" },
+    { "id": "node-dead-default", "type": "exit",         "col": 6, "row": 1, "label": "0.0.0.0/0" },
+    { "id": "node-dest",          "type": "destination",  "col": 9, "row": 4, "label": "web.fcc" }
   ],
   "edges": [
-    { "from": "node-spawn", "to": "node-jct",  "directed": false, "dropRate": 0 },
-    { "from": "node-jct",   "to": "node-dns",  "directed": false, "dropRate": 0 },
-    { "from": "node-jct",   "to": "node-r1",   "directed": false, "dropRate": 0 },
-    { "from": "node-r1",    "to": "node-dest", "directed": false, "dropRate": 0 }
+    { "from": "node-spawn", "to": "node-jct",            "directed": false, "dropRate": 0 },
+    { "from": "node-jct",   "to": "node-dns",            "directed": false, "dropRate": 0 },
+    { "from": "node-jct",   "to": "node-r1",             "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-dest",           "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-dead-16",        "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-dead-default",   "directed": false, "dropRate": 0 }
   ],
   "firewallRules": [],
   "labels": [

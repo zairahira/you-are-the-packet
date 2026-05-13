@@ -1,28 +1,35 @@
 {
-  "id": 4,
-  "title": "The Firewall Gate",
+  "id": 7,
+  "title": "Port of Entry",
   "concept": "ports-and-firewalls",
   "theory": {
     "title": "Firewalls and Ports",
-    "plainObjective": "You carry HTTP traffic on port 80. Choose the firewall gate that allows port 80 through.",
+    "buildsOn": ["routing-table", "longest-prefix-match"],
+    "recap": "You can read routing tables and pick the most specific route. Now your packet also carries a port number, and gateways check that port. The path opens with R1 - longest-prefix match, just like before - and the new mechanic only appears once you've routed correctly.",
+    "newConcept": "firewall",
+    "plainObjective": "Route through R1 to reach the firewall fork, then pass through the gate that allows your port (80).",
     "summary": "Every server on the internet sits behind a firewall with rules like these. When your browser connects to a website, the request only gets through because port 80 or 443 is explicitly allowed.",
     "bodyParagraphs": [
       {
         "heading": "What is a port?",
-        "text": "Every network service listens on a numbered port. Web servers use port 80 (HTTP) or 443 (HTTPS). SSH remote access uses port 22. Your packet carries port 80 because it is HTTP traffic."
+        "text": "Every network service listens on a numbered port. Web servers use port 80 (HTTP) or 443 (HTTPS). SSH remote access uses port 22. Your packet carries port 80 because it is HTTP traffic - the destination IP gets you to the right machine, the port gets you to the right service on it."
       },
       {
         "heading": "What does a firewall do?",
         "text": "A firewall sits between network segments and checks each packet against a list of rules. Rules specify which ports are allowed or denied. The first matching rule wins. If no rule matches, traffic is denied by default."
       },
       {
+        "heading": "Routing comes first",
+        "text": "R1 still uses the rules from Act I: match the destination IP against the routing table, longest prefix wins. Only once R1 sends you to the firewall fork does the new port-filtering rule apply."
+      },
+      {
         "heading": "Reading the rules",
-        "text": "Look at the label on each gate ahead. One reads ALLOWS: 80, 443 and the other ALLOWS: 22. Your packet carries port 80, so only one gate will let you through."
+        "text": "Each firewall gate shows what it allows. One reads ALLOWS: 80, 443 and the other ALLOWS: 22. Your packet carries port 80, so only one gate will let you through."
       }
     ],
-    "mission": "You are carrying HTTP traffic on port 80. Two firewall gates stand between you and the server. Read the rules on each gate, then pass through the one that allows port 80."
+    "mission": "You carry HTTP traffic on port 80, destined for 10.0.2.20.\n\nR1 has three overlapping routes - pick the most specific one to the destination subnet. After R1, choose the firewall gate that allows port 80."
   },
-  "gridWidth": 10,
+  "gridWidth": 12,
   "gridHeight": 8,
   "tileSize": 64,
   "player": {
@@ -34,11 +41,21 @@
   },
   "destination": { "nodeId": "node-dest", "label": "web-server" },
   "nodes": [
-    { "id": "node-spawn",   "type": "spawn",       "col": 1, "row": 4 },
-    { "id": "node-chk",     "type": "exit",        "col": 3, "row": 4, "checkpoint": true },
-    { "id": "node-jct",     "type": "exit",        "col": 5, "row": 4 },
+    { "id": "node-spawn", "type": "spawn",       "col": 1, "row": 4 },
     {
-      "id": "node-fw-http", "type": "firewall",    "col": 5, "row": 2, "label": "FW-HTTP",
+      "id": "node-r1",    "type": "router",      "col": 3, "row": 4,
+      "label": "R1", "checkpoint": true,
+      "routingTable": [
+        { "prefix": "10.0.2.0/24", "nextHop": "node-jct",          "interface": "eth0" },
+        { "prefix": "10.0.0.0/16", "nextHop": "node-dead-16",       "interface": "eth1" },
+        { "prefix": "0.0.0.0/0",   "nextHop": "node-dead-default",  "interface": "eth2" }
+      ]
+    },
+    { "id": "node-dead-16",      "type": "exit",        "col": 3, "row": 6, "label": "10.0.0.0/16" },
+    { "id": "node-dead-default", "type": "exit",        "col": 3, "row": 2, "label": "0.0.0.0/0" },
+    { "id": "node-jct",          "type": "exit",        "col": 6, "row": 4, "checkpoint": true },
+    {
+      "id": "node-fw-http", "type": "firewall",    "col": 6, "row": 2, "label": "FW-HTTP",
       "firewallRules": [
         { "port": 80,  "protocol": "*", "action": "allow" },
         { "port": 443, "protocol": "*", "action": "allow" },
@@ -46,24 +63,26 @@
       ]
     },
     {
-      "id": "node-fw-ssh",  "type": "firewall",    "col": 5, "row": 6, "label": "FW-SSH",
+      "id": "node-fw-ssh",  "type": "firewall",    "col": 6, "row": 6, "label": "FW-SSH",
       "firewallRules": [
         { "port": 22,  "protocol": "*", "action": "allow" },
         { "port": "*", "protocol": "*", "action": "deny"  }
       ]
     },
-    { "id": "node-ex-http", "type": "exit",        "col": 7, "row": 2 },
-    { "id": "node-dest",    "type": "destination", "col": 9, "row": 2, "label": "web-server" },
-    { "id": "node-ex-ssh",  "type": "exit",        "col": 7, "row": 6, "label": "SSH Server" }
+    { "id": "node-ex-http", "type": "exit",        "col": 8, "row": 2 },
+    { "id": "node-ex-ssh",  "type": "exit",        "col": 8, "row": 6, "label": "SSH Server" },
+    { "id": "node-dest",    "type": "destination", "col": 11, "row": 2, "label": "web-server" }
   ],
   "edges": [
-    { "from": "node-spawn",   "to": "node-chk",     "directed": false, "dropRate": 0 },
-    { "from": "node-chk",     "to": "node-jct",     "directed": false, "dropRate": 0 },
-    { "from": "node-jct",     "to": "node-fw-http", "directed": false, "dropRate": 0 },
-    { "from": "node-jct",     "to": "node-fw-ssh",  "directed": false, "dropRate": 0 },
-    { "from": "node-fw-http", "to": "node-ex-http", "directed": false, "dropRate": 0 },
-    { "from": "node-ex-http", "to": "node-dest",    "directed": false, "dropRate": 0 },
-    { "from": "node-fw-ssh",  "to": "node-ex-ssh",  "directed": false, "dropRate": 0 }
+    { "from": "node-spawn",   "to": "node-r1",            "directed": false, "dropRate": 0 },
+    { "from": "node-r1",      "to": "node-jct",           "directed": false, "dropRate": 0 },
+    { "from": "node-r1",      "to": "node-dead-16",       "directed": false, "dropRate": 0 },
+    { "from": "node-r1",      "to": "node-dead-default",  "directed": false, "dropRate": 0 },
+    { "from": "node-jct",     "to": "node-fw-http",       "directed": false, "dropRate": 0 },
+    { "from": "node-jct",     "to": "node-fw-ssh",        "directed": false, "dropRate": 0 },
+    { "from": "node-fw-http", "to": "node-ex-http",       "directed": false, "dropRate": 0 },
+    { "from": "node-ex-http", "to": "node-dest",          "directed": false, "dropRate": 0 },
+    { "from": "node-fw-ssh",  "to": "node-ex-ssh",        "directed": false, "dropRate": 0 }
   ],
   "firewallRules": [],
   "labels": [
@@ -98,5 +117,5 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-chk", "node-jct", "node-fw-http", "node-ex-http", "node-dest"]
+  "correctPath": ["node-spawn", "node-r1", "node-jct", "node-fw-http", "node-ex-http", "node-dest"]
 }

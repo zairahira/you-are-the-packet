@@ -21,10 +21,37 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      height: 100%;
+      justify-content: flex-start;
+      min-height: 100%;
       padding: 32px 24px;
       gap: 24px;
+      overflow-y: auto;
+    }
+
+    #acts-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    .act-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .act-title {
+      font-size: 0.85rem;
+      color: #dbb8ff;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: bold;
+      margin: 0;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #3b3b4f;
+      text-align: left;
     }
 
     #screen-game {
@@ -251,6 +278,33 @@
       margin: 0;
       padding-left: 12px;
       border-left: 2px solid #acd157;
+    }
+
+    /* ── Spiral: builds-on pills + recap ── */
+    .theory-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .theory-pill {
+      font-size: 0.66rem;
+      color: #99c9ff;
+      background: rgba(153, 201, 255, 0.10);
+      border: 1px solid rgba(153, 201, 255, 0.35);
+      padding: 3px 8px;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .theory-recap {
+      font-size: 0.85rem;
+      color: #dbb8ff;
+      line-height: 1.65;
+      margin: 0;
+      padding: 10px 14px;
+      background: rgba(219, 184, 255, 0.06);
+      border-left: 2px solid #dbb8ff;
     }
 
     .ip-val {

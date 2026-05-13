@@ -4,6 +4,9 @@
   "concept": "multiple-hops",
   "theory": {
     "title": "Hops: One Router at a Time",
+    "buildsOn": ["routing-table"],
+    "recap": "Last level you read one routing table and followed the matching exit. This level does the same thing twice in a row: each router reads its own table, with no shared knowledge of the path.",
+    "newConcept": "multi-hop",
     "plainObjective": "Navigate through two routers in a chain - each one makes its own independent decision about where to send you.",
     "summary": "Every message you send online crosses many routers like this. Each one reads only the destination address and forwards the packet without knowing the full path ahead.",
     "bodyParagraphs": [

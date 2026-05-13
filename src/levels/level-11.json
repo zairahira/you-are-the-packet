@@ -1,11 +1,14 @@
 {
-  "id": 11,
+  "id": 10,
   "title": "The Traffic Distributor",
   "concept": "load-balancing",
   "theory": {
     "title": "Load Balancing: Sharing the Work",
-    "plainObjective": "Three backends are ahead. Two have failed. Find the healthy one and deliver your packet.",
-    "summary": "Every major website you use - GitHub, YouTube, freeCodeCamp - runs behind a load balancer. The pattern of routing around failures is what keeps services online even when individual servers crash.",
+    "buildsOn": ["routing-table", "firewall", "packet-loss"],
+    "recap": "You've routed by IP, passed firewalls, and avoided lossy links. A load balancer combines all three ideas at the server side: traffic still has to be routed to it, pass its port filter, and then be distributed across multiple healthy backends - skipping any that have failed.",
+    "newConcept": "load-balancing",
+    "plainObjective": "Route to the front-end firewall, pass on port 80, then pick any of the healthy backends. The load balancer would normally pick for you - here, you experience the choice firsthand.",
+    "summary": "Every major website you use - GitHub, YouTube, freeCodeCamp - runs behind a load balancer. The traffic you generated reading this very sentence was distributed across one of many servers, exactly like this.",
     "bodyParagraphs": [
       {
         "heading": "Why not just one server?",
@@ -16,84 +19,108 @@
         "text": "A load balancer sits in front of a pool of backend servers. Every incoming request goes to the load balancer, which forwards it to one backend. Clients connect to the load balancer's address, not to any server directly. The entire pool appears as a single address."
       },
       {
-        "heading": "Health checks",
-        "text": "Load balancers continuously test each backend - usually a small HTTP request every few seconds. A backend that fails the check is removed from rotation until it recovers. Without health checks, the load balancer would keep sending traffic to a crashed server and requests would fail silently."
+        "heading": "Distribution algorithms",
+        "text": "Round-robin sends each new request to the next backend in turn. Least-connections picks the backend currently handling the fewest active sessions. Weighted distribution sends more traffic to higher-capacity backends. The point is that no single backend handles everything - the load is shared."
       },
       {
-        "heading": "Types of failure",
-        "text": "Backends fail in different ways. A link failure (broken cable, network outage) means packets never arrive. An application failure (crashed process, full disk) means the link works but the server rejects connections. A good load balancer detects and handles both."
+        "heading": "Health checks",
+        "text": "Load balancers continuously test each backend - usually a small HTTP request every few seconds. A backend that fails the check is removed from the pool. The two healthy backends ahead would each take a share of traffic; the failed one is silently skipped."
       }
     ],
-    "mission": "Three backends are ahead. One has a broken link, one is rejecting all connections. Find the healthy backend and deliver your packet."
+    "mission": "You carry port 80, destined for 10.30.1.1.\n\nRoute through R1, pass the firewall (port 80 only), then arrive at the load balancer. Two of the three backends are healthy - either one reaches the server. The third has crashed at the application layer and rejects all connections."
   },
-  "gridWidth": 7,
+  "gridWidth": 13,
   "gridHeight": 8,
   "tileSize": 64,
   "player": {
     "startNode": "node-spawn",
     "srcIP": "10.0.4.5",
     "destIP": "10.30.1.1",
-    "portTag": "80",
+    "portTag": 80,
     "domainName": null
   },
   "destination": { "nodeId": "node-dest", "label": "APP SERVER" },
   "nodes": [
-    { "id": "node-spawn", "type": "spawn",       "col": 1, "row": 4 },
-    { "id": "node-lb",    "type": "exit",         "col": 4, "row": 4, "checkpoint": true, "label": "LOAD BALANCER" },
-    { "id": "node-ba",    "type": "exit",         "col": 4, "row": 2, "label": "BACKEND-A" },
-    { "id": "node-dest",  "type": "destination",  "col": 6, "row": 2, "label": "APP SERVER" },
+    { "id": "node-spawn", "type": "spawn",       "col": 1,  "row": 4 },
     {
-      "id": "node-fw-bb", "type": "firewall",     "col": 4, "row": 6,
-      "label": "BACKEND-B",
+      "id": "node-r1",    "type": "router",      "col": 3,  "row": 4,
+      "label": "R1", "checkpoint": true,
+      "routingTable": [
+        { "prefix": "10.30.0.0/16", "nextHop": "node-fw",     "interface": "eth0" },
+        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead-d", "interface": "eth1" }
+      ]
+    },
+    { "id": "node-dead-d", "type": "exit",       "col": 3,  "row": 6, "label": "0.0.0.0/0" },
+    {
+      "id": "node-fw",     "type": "firewall",   "col": 5,  "row": 4, "label": "FW :80",
+      "firewallRules": [
+        { "port": 80,  "protocol": "*", "action": "allow" },
+        { "port": "*", "protocol": "*", "action": "deny" }
+      ]
+    },
+    { "id": "node-lb",     "type": "exit",       "col": 7,  "row": 4, "checkpoint": true, "label": "LOAD BALANCER" },
+    { "id": "node-ba",     "type": "exit",       "col": 7,  "row": 2, "label": "BACKEND-A" },
+    { "id": "node-ba-mid", "type": "exit",       "col": 11, "row": 2 },
+    { "id": "node-bb",     "type": "exit",       "col": 9,  "row": 4, "label": "BACKEND-B" },
+    {
+      "id": "node-fw-bc",  "type": "firewall",   "col": 7,  "row": 6,
+      "label": "BACKEND-C",
       "firewallRules": [
         { "port": "*", "protocol": "*", "action": "deny" }
       ]
     },
-    { "id": "node-bc",    "type": "exit",         "col": 6, "row": 4, "label": "BACKEND-C" }
+    { "id": "node-dest",   "type": "destination","col": 11, "row": 4, "label": "APP SERVER" }
   ],
   "edges": [
-    { "from": "node-spawn", "to": "node-lb",    "directed": false, "dropRate": 0 },
-    { "from": "node-lb",    "to": "node-ba",    "directed": false, "dropRate": 0 },
-    { "from": "node-ba",    "to": "node-dest",  "directed": false, "dropRate": 0 },
-    { "from": "node-lb",    "to": "node-fw-bb", "directed": false, "dropRate": 0 },
-    { "from": "node-lb",    "to": "node-bc",    "directed": false, "dropRate": 1 }
+    { "from": "node-spawn", "to": "node-r1",     "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-fw",     "directed": false, "dropRate": 0 },
+    { "from": "node-r1",    "to": "node-dead-d", "directed": false, "dropRate": 0 },
+    { "from": "node-fw",    "to": "node-lb",     "directed": false, "dropRate": 0 },
+    { "from": "node-lb",    "to": "node-ba",     "directed": false, "dropRate": 0 },
+    { "from": "node-lb",    "to": "node-bb",     "directed": false, "dropRate": 0 },
+    { "from": "node-lb",    "to": "node-fw-bc",  "directed": false, "dropRate": 0 },
+    { "from": "node-ba",    "to": "node-ba-mid", "directed": false, "dropRate": 0 },
+    { "from": "node-ba-mid","to": "node-dest",   "directed": false, "dropRate": 0 },
+    { "from": "node-bb",    "to": "node-dest",   "directed": false, "dropRate": 0 }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",  "text": "YOU: 10.0.4.5",  "attachToNode": "node-spawn",  "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-dest", "text": "DEST: 10.30.1.1", "attachToNode": "node-spawn",  "offsetY": -58, "style": "ip-label"   },
-    { "id": "lbl-lb",   "text": "LOAD BALANCER",   "attachToNode": "node-lb",     "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-ba",   "text": "BACKEND-A",        "attachToNode": "node-ba",     "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-hea",  "text": "HEALTHY",          "attachToNode": "node-ba",     "offsetY": -58, "style": "cidr-label" },
-    { "id": "lbl-bb",   "text": "BACKEND-B",        "attachToNode": "node-fw-bb",  "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-heb",  "text": "APP FAILURE",      "attachToNode": "node-fw-bb",  "offsetY": -58, "style": "rule-text"  },
-    { "id": "lbl-bc",   "text": "BACKEND-C",        "attachToNode": "node-bc",     "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-hec",  "text": "LINK FAILURE",     "attachToNode": "node-bc",     "offsetY": -58, "style": "rule-text"  }
+    { "id": "lbl-src",  "text": "YOU: 10.0.4.5",   "attachToNode": "node-spawn", "offsetY": -40, "style": "ip-label"   },
+    { "id": "lbl-port", "text": "PORT: 80",         "attachToNode": "node-spawn", "offsetY": -58, "style": "port-label" },
+    { "id": "lbl-dest", "text": "DEST: 10.30.1.1",  "attachToNode": "node-spawn", "offsetY": -76, "style": "ip-label"   },
+    { "id": "lbl-fw",   "text": "ALLOWS: 80",       "attachToNode": "node-fw",    "offsetY": -40, "style": "rule-text"  },
+    { "id": "lbl-lb",   "text": "LOAD BALANCER",    "attachToNode": "node-lb",    "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-ba",   "text": "BACKEND-A",        "attachToNode": "node-ba",    "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-hea",  "text": "HEALTHY",          "attachToNode": "node-ba",    "offsetY": -58, "style": "cidr-label" },
+    { "id": "lbl-bb",   "text": "BACKEND-B",        "attachToNode": "node-bb",    "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-heb",  "text": "HEALTHY",          "attachToNode": "node-bb",    "offsetY": -58, "style": "cidr-label" },
+    { "id": "lbl-bc",   "text": "BACKEND-C",        "attachToNode": "node-fw-bc", "offsetY": -40, "style": "rule-text"  },
+    { "id": "lbl-hec",  "text": "APP FAILURE",      "attachToNode": "node-fw-bc", "offsetY": -58, "style": "rule-text"  }
   ],
   "termIntroductions": [
     {
       "termKey": "load-balancer",
       "triggerNode": "node-lb",
       "headline": "Load Balancer",
-      "body": "A load balancer distributes incoming traffic across multiple backend servers. Clients connect to its address, not to individual backends. This improves availability and lets the backend pool scale without clients knowing anything changed.",
+      "body": "A load balancer distributes incoming traffic across multiple backend servers. Clients connect to its address, not to any individual backend. This improves availability and lets the backend pool scale without clients knowing anything changed.",
       "highlightNodeId": "node-lb"
     },
     {
-      "termKey": "app-failure",
-      "triggerNode": "node-fw-bb",
-      "headline": "Application Failure",
-      "body": "The link to this backend is up - packets arrive - but the application is not responding. It could be a crashed process, an out-of-memory server, or a misconfiguration. A load balancer's health check would flag this backend as unhealthy and stop sending it traffic.",
-      "highlightNodeId": "node-fw-bb"
+      "termKey": "lb-distribution",
+      "triggerNode": "node-ba",
+      "headline": "Distribution",
+      "body": "Backend-A and Backend-B are both healthy. A real load balancer would round-robin between them - the very next request from another user would land on the other backend. From your perspective, you connected to one address; behind the scenes the work is shared.",
+      "highlightNodeId": "node-bb"
     },
     {
-      "termKey": "link-failure",
-      "triggerNode": "node-bc",
-      "headline": "Link Failure",
-      "body": "This backend is unreachable because the network link itself is broken - packets disappear before arriving. This is different from an application failure: the server might be running fine, but nothing gets through. Health checks detect link failures too.",
-      "highlightNodeId": "node-bc"
+      "termKey": "lb-health-check",
+      "triggerNode": "node-fw-bc",
+      "headline": "Health Check",
+      "body": "Backend-C is in the pool but its application has crashed - it rejects every connection. A real load balancer's health check would notice within seconds and pull it out of rotation. Until then, any traffic sent to it fails. Health checks turn three backends into 'two healthy + one excluded'.",
+      "highlightNodeId": "node-fw-bc"
     }
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-lb", "node-ba", "node-dest"]
+  "correctPath": ["node-spawn", "node-r1", "node-fw", "node-lb", "node-bb", "node-dest"]
 }
