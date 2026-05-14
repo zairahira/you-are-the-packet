@@ -1,0 +1,124 @@
+{
+  "id": 14,
+  "title": "Remember Me",
+  "concept": "cookies",
+  "theory": {
+    "title": "Cookies: How Servers Remember You",
+    "buildsOn": ["http-request", "routing-table", "firewall"],
+    "recap": "HTTP is stateless - every request is independent. The server has no memory of previous requests. But websites clearly remember who you are between pages. Cookies are the mechanism that adds state to a stateless protocol.",
+    "newConcept": "cookies",
+    "plainObjective": "Route to the login server to receive a session cookie, then present the cookie to pass the session gate and reach the dashboard.",
+    "summary": "Cookies are small key-value strings the server sends to your browser. Your browser stores them and sends them back with every subsequent request. The server reads the cookie to identify you - that is how 'stay logged in' works.",
+    "bodyParagraphs": [
+      {
+        "heading": "Set-Cookie and Cookie headers",
+        "text": "When you log in, the server responds with a Set-Cookie header: Set-Cookie: session=abc123; HttpOnly; Secure. Your browser stores that value. Every future request to that site includes: Cookie: session=abc123. The server looks up that session token to know who you are."
+      },
+      {
+        "heading": "HttpOnly and Secure flags",
+        "text": "HttpOnly means JavaScript cannot read the cookie - protecting against XSS attacks. Secure means the cookie is only sent over HTTPS. Missing these flags is a common security mistake that lets attackers steal session tokens."
+      },
+      {
+        "heading": "Session hijacking",
+        "text": "If an attacker captures your session cookie (via XSS or an unencrypted connection), they can impersonate you - the server sees the cookie and trusts it. This is called session hijacking. The server cannot tell it is not the real you."
+      },
+      {
+        "heading": "What the session gate checks",
+        "text": "Many API endpoints check: 'Does this request have a valid session cookie?' before doing anything. Without the cookie, they return 401 Unauthorized. You must visit the login server first to receive the cookie before the session gate will let you through."
+      }
+    ],
+    "mission": "You carry a POST /login request to 10.50.2.10 on port 443.\n\nRoute through R1 and the HTTPS firewall. Try the bypass path first to see what happens without a cookie. Then visit the login server to receive your session token, and carry it past the session gate to the dashboard."
+  },
+  "gridWidth": 13,
+  "gridHeight": 7,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.0.5.5",
+    "destIP": "10.50.2.10",
+    "portTag": 443,
+    "httpMethod": "POST",
+    "httpPath": "/login"
+  },
+  "destination": { "nodeId": "node-dest", "label": "user-dashboard" },
+  "nodes": [
+    { "id": "node-spawn",    "type": "spawn",        "col": 1, "row": 3 },
+    {
+      "id": "node-r1",       "type": "router",       "col": 3, "row": 3,
+      "checkpoint": true,
+      "label": "R1",
+      "routingTable": [
+        { "prefix": "10.50.2.0/24", "nextHop": "node-fw443",  "interface": "eth0" },
+        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead",   "interface": "eth1" }
+      ]
+    },
+    { "id": "node-dead",     "type": "exit",         "col": 3, "row": 1, "label": "0.0.0.0/0" },
+    {
+      "id": "node-fw443",    "type": "firewall",     "col": 5, "row": 3, "label": "HTTPS FW",
+      "checkpoint": true,
+      "firewallRules": [
+        { "port": 443, "protocol": "*", "action": "allow" },
+        { "port": "*", "protocol": "*", "action": "deny"  }
+      ]
+    },
+    { "id": "node-bypass",   "type": "exit",         "col": 5, "row": 1, "label": "bypass-path" },
+    { "id": "node-ses-skip", "type": "session-gate", "col": 7, "row": 1, "label": "session-gate" },
+    { "id": "node-login",    "type": "http-node",    "col": 7, "row": 3, "label": "login-server",
+      "setCookie": "session-abc123" },
+    { "id": "node-ses-main", "type": "session-gate", "col": 9, "row": 3, "label": "session-gate", "checkpoint": true },
+    { "id": "node-dest",     "type": "destination",  "col": 11,"row": 3, "label": "user-dashboard" }
+  ],
+  "edges": [
+    { "from": "node-spawn",    "to": "node-r1",       "directed": false, "dropRate": 0 },
+    { "from": "node-r1",       "to": "node-dead",     "directed": false, "dropRate": 0 },
+    { "from": "node-r1",       "to": "node-fw443",    "directed": false, "dropRate": 0 },
+    { "from": "node-fw443",    "to": "node-bypass",   "directed": false, "dropRate": 0 },
+    { "from": "node-bypass",   "to": "node-ses-skip", "directed": false, "dropRate": 0 },
+    { "from": "node-fw443",    "to": "node-login",    "directed": false, "dropRate": 0 },
+    { "from": "node-login",    "to": "node-ses-main", "directed": false, "dropRate": 0 },
+    { "from": "node-ses-main", "to": "node-dest",     "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",    "text": "YOU: 10.0.5.5",      "attachToNode": "node-spawn",   "offsetY": -40, "style": "ip-label"   },
+    { "id": "lbl-dest",   "text": "DEST: 10.50.2.10",   "attachToNode": "node-spawn",   "offsetY": -58, "style": "ip-label"   },
+    { "id": "lbl-method", "text": "POST /login",          "attachToNode": "node-spawn",   "offsetY": -76, "style": "port-label" },
+    { "id": "lbl-fw",     "text": "ALLOWS: port 443",    "attachToNode": "node-fw443",   "offsetY": -40, "style": "rule-text"  },
+    { "id": "lbl-bypass", "text": "no login →",          "attachToNode": "node-bypass",  "offsetY": -40, "style": "rule-text"  },
+    { "id": "lbl-cookie", "text": "Set-Cookie: session", "attachToNode": "node-login",   "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-ses",    "text": "checks cookie",       "attachToNode": "node-ses-main","offsetY": -40, "style": "rule-text"  }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "cookie",
+      "triggerNode": "node-spawn",
+      "headline": "Cookies",
+      "body": "HTTP is stateless - every request is independent. Cookies solve this. When you log in, the server sends Set-Cookie in the response. Your browser stores it and sends Cookie: <value> with every future request. The server recognizes the token and knows who you are.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "session-gate-blocked",
+      "triggerNode": "node-ses-skip",
+      "headline": "401 Unauthorized",
+      "body": "No session cookie - the server returns 401 Unauthorized. You cannot access the dashboard without authenticating first. Go back and visit the login server to receive your session token.",
+      "highlightNodeId": "node-ses-skip"
+    },
+    {
+      "termKey": "set-cookie",
+      "triggerNode": "node-login",
+      "headline": "Set-Cookie",
+      "body": "The login server responds with Set-Cookie: session=abc123. Your packet now carries this token. The session gate ahead reads the Cookie header and compares it to active sessions on the server. If it matches, you're in.",
+      "highlightNodeId": "node-login"
+    },
+    {
+      "termKey": "session-gate-passed",
+      "triggerNode": "node-ses-main",
+      "headline": "Session Verified",
+      "body": "The session gate found your cookie, validated the token, and knows you logged in. This is how every web app that has a 'Log In' button works - the session cookie is what keeps you logged in as you navigate between pages.",
+      "highlightNodeId": "node-ses-main"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-r1", "node-fw443", "node-login", "node-ses-main", "node-dest"]
+}

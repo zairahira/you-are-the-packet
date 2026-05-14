@@ -33,6 +33,31 @@ const ACTS = [
       { id: 12, title: 'The Encrypted Channel',   concept: 'TLS'             },
     ],
   },
+  {
+    name: 'Act V - What You Carry',
+    levels: [
+      { id: 13, title: 'The Request',         concept: 'HTTP'              },
+      { id: 14, title: 'Remember Me',         concept: 'Cookies & Sessions'},
+      { id: 15, title: 'The Shortcut',        concept: 'CDN & Caching'     },
+      { id: 16, title: 'Follow the Redirect', concept: 'HTTP Redirects'    },
+    ],
+  },
+  {
+    name: 'Act VI - The Open Internet',
+    levels: [
+      { id: 17, title: 'Crossing Borders', concept: 'BGP'     },
+      { id: 18, title: 'Nearest Wins',     concept: 'Anycast' },
+      { id: 19, title: 'The Meeting Point',concept: 'IXP'     },
+    ],
+  },
+  {
+    name: 'Act VII - Under Threat',
+    levels: [
+      { id: 20, title: 'The Impersonator', concept: 'MITM & HSTS'    },
+      { id: 21, title: 'The Flood',        concept: 'DDoS & Rate Limiting' },
+      { id: 22, title: 'Signed Ground',    concept: 'DNSSEC'          },
+    ],
+  },
 ]
 
 export function mountMenu(container, onSelect) {

@@ -1,0 +1,137 @@
+{
+  "id": 18,
+  "title": "Nearest Wins",
+  "concept": "anycast",
+  "theory": {
+    "title": "Anycast: One Address, Many Locations",
+    "buildsOn": ["bgp", "routing-table", "cidr", "dns"],
+    "recap": "BGP propagates routes between Autonomous Systems. Multiple ASes can advertise the same prefix - and that is exactly what anycast relies on. Every BGP router picks the shortest path to each prefix, so the nearest advertiser wins.",
+    "newConcept": "anycast",
+    "plainObjective": "Your packet's destination is an anycast IP (198.18.0.1) advertised by three edge nodes at different distances. The routing table uses increasingly specific prefixes - the longest match is the nearest edge. Navigate there.",
+    "summary": "Anycast powers the global DNS system (all 13 root name servers are anycast), Cloudflare's 1.1.1.1 resolver, and every major CDN. The same IP is served from hundreds of locations worldwide - BGP ensures you always reach the nearest one.",
+    "bodyParagraphs": [
+      {
+        "heading": "How anycast works",
+        "text": "In anycast, multiple physical servers share the same IP address and each advertises it via BGP. Internet routers choose the shortest path to each prefix, so traffic naturally flows to the nearest server. No central coordinator is needed - BGP handles it automatically."
+      },
+      {
+        "heading": "Longest prefix wins = nearest wins",
+        "text": "A nearby anycast node can advertise a more specific prefix (/32 host route) while distant nodes advertise less specific ranges (/25, /24). BGP's longest-prefix matching selects the /32 first - effectively choosing the nearest node. This is the elegant trick: routing specificity encodes physical proximity."
+      },
+      {
+        "heading": "Anycast in practice",
+        "text": "Every time your computer sends a DNS query, it goes to the nearest DNS root server via anycast. 1.1.1.1 (Cloudflare) and 8.8.8.8 (Google) are anycast addresses served from hundreds of PoPs. Your query never travels farther than necessary."
+      },
+      {
+        "heading": "Anycast vs unicast vs multicast",
+        "text": "Unicast: one sender, one receiver (most traffic). Broadcast: one sender, all receivers on a network (local only). Multicast: one sender, a subscribed group. Anycast: one sender, nearest of many receivers. Only anycast scales globally because it uses existing BGP infrastructure."
+      }
+    ],
+    "mission": "Your destIP is 198.18.0.1 - an anycast address served by three edge nodes.\n\nFrom the ISP AS node, three exits are available. The routing table has three entries with different prefix lengths. Apply longest-prefix matching: the /32 host route is the most specific and points to the nearest edge."
+  },
+  "gridWidth": 15,
+  "gridHeight": 7,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "203.0.113.5",
+    "destIP": "198.18.0.1",
+    "portTag": 80
+  },
+  "destination": { "nodeId": "node-near", "label": "Nearest Edge (1 hop)" },
+  "nodes": [
+    { "id": "node-spawn",   "type": "spawn",   "col": 1,  "row": 3 },
+    {
+      "id": "node-r1",      "type": "router",  "col": 3,  "row": 3,
+      "checkpoint": true,
+      "label": "R1",
+      "routingTable": [
+        { "prefix": "198.18.0.0/16", "nextHop": "node-fw",   "interface": "eth0" },
+        { "prefix": "0.0.0.0/0",     "nextHop": "node-dead", "interface": "eth1" }
+      ]
+    },
+    { "id": "node-dead",    "type": "exit",    "col": 3,  "row": 1, "label": "0.0.0.0/0" },
+    {
+      "id": "node-fw",      "type": "firewall","col": 5,  "row": 3, "label": "Border FW",
+      "firewallRules": [
+        { "port": 80,  "protocol": "*", "action": "allow" },
+        { "port": "*", "protocol": "*", "action": "deny"  }
+      ]
+    },
+    {
+      "id": "node-as-border","type": "as-node", "col": 7,  "row": 3,
+      "checkpoint": true,
+      "label": "AS-Border (64520)",
+      "routingTable": [
+        { "prefix": "198.18.0.0/16", "nextHop": "node-as-isp", "interface": "peer-ISP" },
+        { "prefix": "0.0.0.0/0",     "nextHop": "node-dead2",  "interface": "eth1"     }
+      ]
+    },
+    { "id": "node-dead2",   "type": "exit",    "col": 7,  "row": 1, "label": "no route" },
+    {
+      "id": "node-as-isp",  "type": "as-node", "col": 9,  "row": 3,
+      "label": "AS-ISP (64521)",
+      "routingTable": [
+        { "prefix": "198.18.0.1/32", "nextHop": "node-near", "interface": "peer-near" },
+        { "prefix": "198.18.0.0/25", "nextHop": "node-med",  "interface": "peer-med"  },
+        { "prefix": "198.18.0.0/24", "nextHop": "node-far",  "interface": "peer-far"  }
+      ]
+    },
+    { "id": "node-far",     "type": "exit",    "col": 9,  "row": 1, "label": "Far Edge (3 hops)"    },
+    { "id": "node-med",     "type": "exit",    "col": 9,  "row": 5, "label": "Medium Edge (2 hops)" },
+    { "id": "node-near",    "type": "destination","col": 11,"row": 3, "label": "Nearest Edge (1 hop)" }
+  ],
+  "edges": [
+    { "from": "node-spawn",    "to": "node-r1",       "directed": false, "dropRate": 0 },
+    { "from": "node-r1",       "to": "node-dead",     "directed": false, "dropRate": 0 },
+    { "from": "node-r1",       "to": "node-fw",       "directed": false, "dropRate": 0 },
+    { "from": "node-fw",       "to": "node-as-border","directed": false, "dropRate": 0 },
+    { "from": "node-as-border","to": "node-dead2",    "directed": false, "dropRate": 0 },
+    { "from": "node-as-border","to": "node-as-isp",   "directed": false, "dropRate": 0 },
+    { "from": "node-as-isp",   "to": "node-far",      "directed": false, "dropRate": 0 },
+    { "from": "node-as-isp",   "to": "node-med",      "directed": false, "dropRate": 0 },
+    { "from": "node-as-isp",   "to": "node-near",     "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",  "text": "YOU: 203.0.113.5",  "attachToNode": "node-spawn",  "offsetY": -40, "style": "ip-label"   },
+    { "id": "lbl-dest", "text": "DEST: 198.18.0.1",  "attachToNode": "node-spawn",  "offsetY": -58, "style": "ip-label"   },
+    { "id": "lbl-port", "text": "PORT: 80",           "attachToNode": "node-spawn",  "offsetY": -76, "style": "port-label" },
+    { "id": "lbl-near", "text": "198.18.0.1/32",  "attachToNode": "node-near", "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-med",  "text": "198.18.0.0/25", "attachToNode": "node-med",  "offsetY": 55,  "style": "cidr-label" },
+    { "id": "lbl-far",  "text": "198.18.0.0/24", "attachToNode": "node-far",  "offsetY": 55,  "style": "cidr-label" }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "anycast",
+      "triggerNode": "node-spawn",
+      "headline": "Anycast",
+      "body": "Anycast: one IP address, many physical servers. Each server advertises the same prefix via BGP. Routers use shortest-path to choose the nearest one. The internet's 13 DNS root name servers, Cloudflare's 1.1.1.1, and Google's 8.8.8.8 all use anycast - your queries always reach the nearest copy.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "anycast-border",
+      "triggerNode": "node-as-border",
+      "headline": "Border AS",
+      "body": "AS-Border receives the anycast prefix 198.18.0.0/16 via BGP from the ISP. It forwards your packet to the ISP node which has the specific /32 host route for the nearest edge. BGP propagates routes hop by hop - each AS learns the path through its peers.",
+      "highlightNodeId": "node-as-border"
+    },
+    {
+      "termKey": "anycast-lpm",
+      "triggerNode": "node-as-isp",
+      "headline": "Nearest = Most Specific Prefix",
+      "body": "Three exits, three prefixes for the same anycast IP. /32 is a host route - the most specific possible. /25 and /24 are progressively less specific. LPM selects /32 first - this is how anycast encodes distance: nearby nodes advertise more specific prefixes and win the routing decision.",
+      "highlightNodeId": "node-as-isp"
+    },
+    {
+      "termKey": "anycast-far",
+      "triggerNode": "node-far",
+      "headline": "Wrong Edge Node",
+      "body": "The /24 route matched, but this edge is 3 AS hops away - much further than the nearest. The more-specific /32 route exists and should have won. BGP's LPM ensures the nearest edge always wins when routes are configured correctly. Go back and take the /32 path.",
+      "highlightNodeId": "node-far"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-r1", "node-fw", "node-as-border", "node-as-isp", "node-near"]
+}

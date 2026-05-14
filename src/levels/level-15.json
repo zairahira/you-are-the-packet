@@ -1,0 +1,130 @@
+{
+  "id": 15,
+  "title": "The Shortcut",
+  "concept": "cdn-caching",
+  "theory": {
+    "title": "CDN & Caching: Content Closer to You",
+    "buildsOn": ["dns", "routing-table", "load-balancer"],
+    "recap": "DNS translates a domain name into an IP address. Load balancers distribute traffic across servers. A CDN combines both ideas: DNS resolves your domain to the nearest CDN edge, and the edge serves cached content instead of forwarding to the origin.",
+    "newConcept": "cdn-caching",
+    "plainObjective": "DNS resolves the domain to the CDN's IP. At the CDN router, read the routing table: the most-specific prefix leads to the cached edge copy. Route there.",
+    "summary": "CDNs work because cached content is served from a node geographically close to you, reducing latency from hundreds of milliseconds to single digits. The Cache-Control header on the response tells caches how long to store content before fetching a fresh copy from origin.",
+    "bodyParagraphs": [
+      {
+        "heading": "What a CDN does",
+        "text": "A Content Delivery Network is a global network of servers (called edge nodes or PoPs) that store copies of content close to end users. When you load a website's image, the CDN edge nearest to you serves it - not a server in another country."
+      },
+      {
+        "heading": "Cache-Control",
+        "text": "The origin server sets Cache-Control headers to tell caches how long to keep content. max-age=3600 means 'this response is fresh for one hour - serve it from cache'. no-cache means 'always revalidate with origin before serving'. no-store means 'never cache this'."
+      },
+      {
+        "heading": "Cache HIT vs MISS",
+        "text": "A cache HIT means the edge has a fresh copy - response is instant. A cache MISS means the edge doesn't have it (or it expired) and must fetch from origin. The first user always triggers a MISS; everyone after them gets a HIT until the content expires."
+      },
+      {
+        "heading": "Routing: most-specific prefix wins",
+        "text": "The CDN router uses longest-prefix matching, just like IP routing. The edge cache has a more specific route (/24) than the origin fallback (/16). Your destIP falls in the /24 range, so the CDN routes you to the edge - the cache hit path."
+      }
+    ],
+    "mission": "Your packet requests api.example.com (port 80). DNS resolves it to 10.60.1.5 - a CDN edge address.\n\nAt the CDN router, the routing table has two entries. Read them carefully. The longer prefix leads to the edge cache (cache HIT). The shorter prefix is the origin fallback. Route to the edge."
+  },
+  "gridWidth": 13,
+  "gridHeight": 7,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.0.5.5",
+    "destIP": null,
+    "portTag": 80,
+    "domainName": "api.example.com"
+  },
+  "destination": { "nodeId": "node-edge", "label": "CDN edge (CACHE HIT)" },
+  "nodes": [
+    { "id": "node-spawn", "type": "spawn",        "col": 1, "row": 3 },
+    {
+      "id": "node-r1",    "type": "router",       "col": 3, "row": 3,
+      "checkpoint": true,
+      "label": "R1",
+      "routingTable": [
+        { "prefix": "10.60.0.0/16", "nextHop": "node-fw", "interface": "eth0" },
+        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead","interface": "eth1" }
+      ]
+    },
+    { "id": "node-dead",  "type": "exit",         "col": 3, "row": 1, "label": "0.0.0.0/0" },
+    {
+      "id": "node-fw",    "type": "firewall",     "col": 5, "row": 3, "label": "CDN FW",
+      "firewallRules": [
+        { "port": 80,  "protocol": "*", "action": "allow" },
+        { "port": "*", "protocol": "*", "action": "deny"  }
+      ]
+    },
+    {
+      "id": "node-dns",   "type": "dns-resolver", "col": 7, "row": 3,
+      "checkpoint": true,
+      "label": "CDN DNS",
+      "dnsRecord": { "domain": "api.example.com", "resolvedIP": "10.60.1.5" }
+    },
+    {
+      "id": "node-cdn",   "type": "router",       "col": 9, "row": 3,
+      "label": "CDN Router",
+      "routingTable": [
+        { "prefix": "10.60.1.0/24", "nextHop": "node-edge",   "interface": "edge0" },
+        { "prefix": "10.60.0.0/16", "nextHop": "node-origin", "interface": "eth1"  }
+      ]
+    },
+    { "id": "node-origin","type": "exit",         "col": 9, "row": 1, "label": "origin (CACHE MISS)" },
+    { "id": "node-edge",  "type": "destination",  "col": 11,"row": 3, "label": "CDN edge (CACHE HIT)" }
+  ],
+  "edges": [
+    { "from": "node-spawn",  "to": "node-r1",     "directed": false, "dropRate": 0 },
+    { "from": "node-r1",     "to": "node-dead",   "directed": false, "dropRate": 0 },
+    { "from": "node-r1",     "to": "node-fw",     "directed": false, "dropRate": 0 },
+    { "from": "node-fw",     "to": "node-dns",    "directed": false, "dropRate": 0 },
+    { "from": "node-dns",    "to": "node-cdn",    "directed": false, "dropRate": 0 },
+    { "from": "node-cdn",    "to": "node-origin", "directed": false, "dropRate": 0 },
+    { "from": "node-cdn",    "to": "node-edge",   "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",    "text": "YOU: 10.0.5.5",         "attachToNode": "node-spawn",  "offsetY": -40, "style": "ip-label"   },
+    { "id": "lbl-dest",   "text": "DEST: api.example.com", "attachToNode": "node-spawn",  "offsetY": -58, "style": "ip-label"   },
+    { "id": "lbl-port",   "text": "PORT: 80 (HTTP)",        "attachToNode": "node-spawn",  "offsetY": -76, "style": "port-label" },
+    { "id": "lbl-dns",    "text": "→ 10.60.1.5",           "attachToNode": "node-dns",    "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-hit",    "text": "10.60.1.0/24 (HIT)",    "attachToNode": "node-edge",   "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-miss",   "text": "10.60.0.0/16 (MISS)",   "attachToNode": "node-origin", "offsetY": -40, "style": "rule-text"  }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "cdn",
+      "triggerNode": "node-spawn",
+      "headline": "CDN",
+      "body": "A Content Delivery Network is a global system of edge servers that cache copies of content near end users. Instead of every request traveling to one central origin server, the CDN serves from the nearest edge. DNS routes you to the nearest CDN node automatically.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "dns-cdn",
+      "triggerNode": "node-dns",
+      "headline": "DNS resolves to CDN",
+      "body": "api.example.com resolved to 10.60.1.5 - a CDN edge IP. The CDN operator configured DNS to return edge IPs instead of the origin. Often different users in different regions get different IPs from the same domain - the nearest edge node.",
+      "highlightNodeId": "node-dns"
+    },
+    {
+      "termKey": "cache-hit",
+      "triggerNode": "node-edge",
+      "headline": "Cache HIT",
+      "body": "The edge node had a fresh cached copy (max-age=3600 was still valid). Response served in <5ms instead of the 120ms round trip to origin. This is why CDNs matter: static assets like images, JS, and CSS can be cached for hours or days.",
+      "highlightNodeId": "node-edge"
+    },
+    {
+      "termKey": "cache-miss",
+      "triggerNode": "node-origin",
+      "headline": "Cache MISS",
+      "body": "The CDN had to fetch from origin - either the content expired or was never cached here. The /16 route is less specific than /24, so this is the fallback path. Your destIP (10.60.1.5) actually fits the /24 prefix - go back and take the more-specific route.",
+      "highlightNodeId": "node-origin"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-r1", "node-fw", "node-dns", "node-cdn", "node-edge"]
+}

@@ -1,0 +1,157 @@
+{
+  "id": 22,
+  "title": "Signed Ground",
+  "concept": "dnssec",
+  "theory": {
+    "title": "DNSSEC: Trusting the Map",
+    "buildsOn": ["dns", "tls", "routing-table"],
+    "recap": "DNS translates domain names to IP addresses. TLS certificates verify a server's identity. But what verifies the DNS answer itself? Without protection, an attacker can inject a fake DNS record and redirect you to a malicious server before TLS even begins.",
+    "newConcept": "dnssec",
+    "plainObjective": "Two DNS resolvers are available. The unsigned resolver returns a poisoned IP that routes to a fake server. The DNSSEC-validated resolver returns the real IP. Choose the DNSSEC resolver, then route to the real destination.",
+    "summary": "DNSSEC adds cryptographic signatures to DNS. Each DNS record is signed with the zone's private key. Resolvers verify the signature chain from the root down to the record. A poisoned record fails signature verification and is rejected. DNSSEC is the foundation of a trustworthy DNS.",
+    "bodyParagraphs": [
+      {
+        "heading": "DNS cache poisoning",
+        "text": "An attacker who can intercept or predict DNS queries can inject a fake response: 'secure.example.com = 203.0.113.99 (attacker's server)'. Your browser trusts this answer and connects to the wrong server. If the attacker also has a certificate for that domain, TLS appears to succeed - but you're talking to the wrong server."
+      },
+      {
+        "heading": "How DNSSEC works",
+        "text": "DNSSEC uses public-key cryptography. Each DNS zone has a Zone Signing Key (ZSK). Records are signed with the ZSK. The ZSK itself is signed by the Key Signing Key (KSK). The KSK's hash is published in the parent zone. The chain ends at the DNS root - which is itself signed by ICANN's key."
+      },
+      {
+        "heading": "Chain of trust",
+        "text": "Validation starts at the root: does the root's signature on .com check out? Does .com's signature on example.com check out? Does example.com's signature on this A record check out? If any link in the chain fails, the resolver returns SERVFAIL instead of the poisoned record."
+      },
+      {
+        "heading": "DNSSEC limitations",
+        "text": "DNSSEC proves the answer came from the legitimate zone operator - but not that the zone operator configured the correct IP. It also doesn't encrypt DNS queries (that's DNS-over-HTTPS or DNS-over-TLS). And DNSSEC deployment is still incomplete: not all zones are signed, and not all resolvers validate."
+      }
+    ],
+    "mission": "You need to reach secure.example.com. Two DNS resolvers are available.\n\nThe unsigned resolver has a poisoned cache: it returns a fake IP (203.0.113.99) that leads to an attacker's server. The DNSSEC-validated resolver verifies the signature chain and returns the real IP (10.70.3.10). Choose DNSSEC, then route to the real server."
+  },
+  "gridWidth": 13,
+  "gridHeight": 7,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.0.5.5",
+    "destIP": null,
+    "portTag": 80,
+    "domainName": "secure.example.com"
+  },
+  "destination": { "nodeId": "node-dest", "label": "real secure-server" },
+  "nodes": [
+    { "id": "node-spawn",     "type": "spawn",        "col": 1, "row": 3 },
+    {
+      "id": "node-fw",        "type": "firewall",     "col": 3, "row": 3,
+      "checkpoint": true,
+      "label": "Border FW",
+      "firewallRules": [
+        { "port": 80,  "protocol": "*", "action": "allow" },
+        { "port": "*", "protocol": "*", "action": "deny"  }
+      ]
+    },
+    { "id": "node-dns-fork",  "type": "http-node",    "col": 5, "row": 3, "label": "DNS Resolvers", "checkpoint": true },
+    {
+      "id": "node-dns-bad",   "type": "dns-resolver", "col": 5, "row": 1,
+      "label": "Unsigned DNS",
+      "dnssec": false,
+      "dnsRecord": {
+        "domain": "secure.example.com",
+        "resolvedIP": "10.70.3.10",
+        "poisonedIP":  "203.0.113.99"
+      }
+    },
+    {
+      "id": "node-r-bad",     "type": "router",       "col": 7, "row": 1,
+      "label": "R-evil",
+      "routingTable": [
+        { "prefix": "203.0.113.0/24", "nextHop": "node-evil",   "interface": "eth0" },
+        { "prefix": "0.0.0.0/0",      "nextHop": "node-no-rt",  "interface": "eth1" }
+      ]
+    },
+    { "id": "node-evil",      "type": "exit",         "col": 9, "row": 1, "label": "attacker's server" },
+    { "id": "node-no-rt",     "type": "exit",         "col": 7, "row": 5, "label": "no route" },
+    {
+      "id": "node-dns-good",  "type": "dns-resolver", "col": 7, "row": 3,
+      "label": "DNSSEC Resolver",
+      "dnssec": true,
+      "dnsRecord": {
+        "domain": "secure.example.com",
+        "resolvedIP": "10.70.3.10"
+      }
+    },
+    {
+      "id": "node-r2",        "type": "router",       "col": 9, "row": 3,
+      "checkpoint": true,
+      "label": "R2",
+      "routingTable": [
+        { "prefix": "10.70.3.0/24", "nextHop": "node-dest",  "interface": "eth0" },
+        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead2", "interface": "eth1" }
+      ]
+    },
+    { "id": "node-dead2",     "type": "exit",         "col": 9, "row": 5, "label": "no route" },
+    { "id": "node-dest",      "type": "destination",  "col": 11,"row": 3, "label": "real secure-server" }
+  ],
+  "edges": [
+    { "from": "node-spawn",    "to": "node-fw",       "directed": false, "dropRate": 0 },
+    { "from": "node-fw",       "to": "node-dns-fork", "directed": false, "dropRate": 0 },
+    { "from": "node-dns-fork", "to": "node-dns-bad",  "directed": false, "dropRate": 0 },
+    { "from": "node-dns-bad",  "to": "node-r-bad",    "directed": false, "dropRate": 0 },
+    { "from": "node-r-bad",    "to": "node-evil",     "directed": false, "dropRate": 0 },
+    { "from": "node-r-bad",    "to": "node-no-rt",    "directed": false, "dropRate": 0 },
+    { "from": "node-dns-fork", "to": "node-dns-good", "directed": false, "dropRate": 0 },
+    { "from": "node-dns-good", "to": "node-r2",       "directed": false, "dropRate": 0 },
+    { "from": "node-r2",       "to": "node-dead2",    "directed": false, "dropRate": 0 },
+    { "from": "node-r2",       "to": "node-dest",     "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",    "text": "YOU: 10.0.5.5",          "attachToNode": "node-spawn",    "offsetY": -40, "style": "ip-label"   },
+    { "id": "lbl-dest",   "text": "DEST: secure.example.com","attachToNode": "node-spawn",    "offsetY": -58, "style": "ip-label"   },
+    { "id": "lbl-port",   "text": "PORT: 80",                "attachToNode": "node-spawn",    "offsetY": -76, "style": "port-label" },
+    { "id": "lbl-bad",    "text": "POISONED cache",          "attachToNode": "node-dns-bad",  "offsetY": -40, "style": "rule-text"  },
+    { "id": "lbl-good",   "text": "DNSSEC validated",        "attachToNode": "node-dns-good", "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-evil",   "text": "→ 203.0.113.99 (fake)",  "attachToNode": "node-evil",     "offsetY": -40, "style": "rule-text"  }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "dnssec",
+      "triggerNode": "node-spawn",
+      "headline": "DNSSEC",
+      "body": "DNS Security Extensions add cryptographic signatures to DNS records. Without DNSSEC, any attacker who can intercept or predict your DNS query can return a fake IP. With DNSSEC, the resolver verifies a signature chain from the root down to the record - poisoned records fail validation.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "dns-fork-choice",
+      "triggerNode": "node-dns-fork",
+      "headline": "Two Resolvers",
+      "body": "Two DNS resolvers: the unsigned one (up) has a poisoned cache - it returns an attacker's IP instead of the real one. The DNSSEC resolver (right) validates each record's cryptographic signature before returning it. The right answer is signed; the fake one is not.",
+      "highlightNodeId": "node-dns-fork"
+    },
+    {
+      "termKey": "dns-poisoned",
+      "triggerNode": "node-dns-bad",
+      "headline": "Cache Poisoning",
+      "body": "The unsigned resolver returned 203.0.113.99 - an attacker's server IP. Without DNSSEC, you cannot verify whether this answer is real. Your packet is now routing toward the attacker's server. Go back to the DNS fork and use the DNSSEC resolver to get the real IP.",
+      "highlightNodeId": "node-dns-bad"
+    },
+    {
+      "termKey": "dnssec-validated",
+      "triggerNode": "node-dns-good",
+      "headline": "DNSSEC Validation",
+      "body": "The DNSSEC resolver verified the signature chain: root → .com → example.com → secure.example.com. Each link was signed by the parent zone. The A record for 10.70.3.10 is authentic. Your packet now has the real destination IP and can route correctly.",
+      "highlightNodeId": "node-dns-good"
+    },
+    {
+      "termKey": "attacker-server",
+      "triggerNode": "node-evil",
+      "headline": "Attacker's Server",
+      "body": "The poisoned DNS record sent you here. The attacker's server at 203.0.113.99 may respond with a valid-looking website - possibly with its own TLS certificate. Without DNSSEC catching the fake DNS answer upstream, you'd never know you reached the wrong server. Go back.",
+      "highlightNodeId": "node-evil"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-fw", "node-dns-fork", "node-dns-good", "node-r2", "node-dest"]
+}

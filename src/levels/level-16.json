@@ -1,0 +1,141 @@
+{
+  "id": 16,
+  "title": "Follow the Redirect",
+  "concept": "http-redirect",
+  "theory": {
+    "title": "HTTP Redirects: Following the Trail",
+    "buildsOn": ["http-request", "routing-table", "firewall"],
+    "recap": "HTTP responses have status codes: 200 means success. But the 3xx range means something different - the resource has moved, and the client must make a new request to a different URL. Redirects are normal and intentional, but redirect chains must terminate.",
+    "newConcept": "http-redirect",
+    "plainObjective": "Follow the HTTP redirect chain from the first server (302 temporary) to the second (301 permanent HTTPS upgrade) to reach the final HTTPS destination.",
+    "summary": "Every time you type http:// in a browser and land on https://, a 301 redirect happened. The server told your browser: this resource permanently lives at a different URL. Browsers follow the chain automatically - but developers must design chains that terminate.",
+    "bodyParagraphs": [
+      {
+        "heading": "301 Permanent vs 302 Temporary",
+        "text": "301 Moved Permanently tells browsers to update their bookmarks and never visit the old URL again. Browsers cache 301s aggressively. 302 Found (temporary) says 'the resource is temporarily elsewhere' - browsers check the original URL again next time."
+      },
+      {
+        "heading": "HTTP to HTTPS redirect",
+        "text": "Sites that want to enforce HTTPS typically have their HTTP server (port 80) respond with 301 to the same path but with https://. This is the HTTPS upgrade redirect. Done correctly, it happens once and browsers cache it."
+      },
+      {
+        "heading": "Redirect loops",
+        "text": "A redirect loop happens when server A redirects to B, and B redirects back to A (or a longer cycle). Browsers detect this after a few redirects and show an error. Well-designed redirect chains always terminate at a real resource."
+      },
+      {
+        "heading": "Too many redirects",
+        "text": "Each redirect in a chain is an extra round trip: client → server → redirect → client → new server. Long chains add latency. Google's guidance: keep redirect chains to one or two hops maximum. Each additional redirect adds at least 100ms on a fast connection."
+      }
+    ],
+    "mission": "Your packet starts on port 80, destined for 10.50.3.5.\n\nThe first server sends a 302 temporary redirect - follow it. The second server sends a 301 permanent redirect to HTTPS. One path leads to a redirect loop - avoid it. Reach the final HTTPS server."
+  },
+  "gridWidth": 15,
+  "gridHeight": 7,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.0.5.5",
+    "destIP": "10.50.3.5",
+    "portTag": 80,
+    "httpMethod": "GET",
+    "httpPath": "/home"
+  },
+  "destination": { "nodeId": "node-dest", "label": "HTTPS 200 OK" },
+  "nodes": [
+    { "id": "node-spawn",  "type": "spawn",     "col": 1,  "row": 3 },
+    {
+      "id": "node-r1",     "type": "router",    "col": 3,  "row": 3,
+      "checkpoint": true,
+      "label": "R1",
+      "routingTable": [
+        { "prefix": "10.50.3.0/24", "nextHop": "node-fw80",   "interface": "eth0" },
+        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead",   "interface": "eth1" }
+      ]
+    },
+    { "id": "node-dead",   "type": "exit",      "col": 3,  "row": 1, "label": "0.0.0.0/0" },
+    {
+      "id": "node-fw80",   "type": "firewall",  "col": 5,  "row": 3, "label": "HTTP FW",
+      "firewallRules": [
+        { "port": 80,  "protocol": "*", "action": "allow" },
+        { "port": "*", "protocol": "*", "action": "deny"  }
+      ]
+    },
+    {
+      "id": "node-r2",     "type": "router",    "col": 7,  "row": 3,
+      "checkpoint": true,
+      "label": "R2",
+      "routingTable": [
+        { "prefix": "10.50.3.0/24", "nextHop": "node-302",    "interface": "eth0" },
+        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead2",  "interface": "eth1" }
+      ]
+    },
+    { "id": "node-dead2",  "type": "exit",      "col": 7,  "row": 1, "label": "dead end" },
+    { "id": "node-302",    "type": "http-node", "col": 9,  "row": 3, "label": "302 Found", "checkpoint": true },
+    { "id": "node-loop",   "type": "exit",      "col": 9,  "row": 1, "label": "Redirect Loop" },
+    { "id": "node-301",    "type": "http-node", "col": 11, "row": 3, "label": "301 → HTTPS" },
+    { "id": "node-broken", "type": "exit",      "col": 11, "row": 1, "label": "Broken redirect" },
+    { "id": "node-dest",   "type": "destination","col": 13,"row": 3, "label": "HTTPS 200 OK" }
+  ],
+  "edges": [
+    { "from": "node-spawn",  "to": "node-r1",     "directed": false, "dropRate": 0 },
+    { "from": "node-r1",     "to": "node-dead",   "directed": false, "dropRate": 0 },
+    { "from": "node-r1",     "to": "node-fw80",   "directed": false, "dropRate": 0 },
+    { "from": "node-fw80",   "to": "node-r2",     "directed": false, "dropRate": 0 },
+    { "from": "node-r2",     "to": "node-dead2",  "directed": false, "dropRate": 0 },
+    { "from": "node-r2",     "to": "node-302",    "directed": false, "dropRate": 0 },
+    { "from": "node-302",    "to": "node-loop",   "directed": false, "dropRate": 0 },
+    { "from": "node-302",    "to": "node-301",    "directed": false, "dropRate": 0 },
+    { "from": "node-301",    "to": "node-broken", "directed": false, "dropRate": 0 },
+    { "from": "node-301",    "to": "node-dest",   "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",    "text": "YOU: 10.0.5.5",       "attachToNode": "node-spawn",   "offsetY": -40, "style": "ip-label"   },
+    { "id": "lbl-dest",   "text": "DEST: 10.50.3.5",     "attachToNode": "node-spawn",   "offsetY": -58, "style": "ip-label"   },
+    { "id": "lbl-port",   "text": "GET /home (port 80)", "attachToNode": "node-spawn",   "offsetY": -76, "style": "port-label" },
+    { "id": "lbl-302",    "text": "302: temp redirect",  "attachToNode": "node-302",     "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-loop",   "text": "→ loops back",        "attachToNode": "node-loop",    "offsetY": -40, "style": "rule-text"  },
+    { "id": "lbl-301",    "text": "301: → https://",     "attachToNode": "node-301",     "offsetY": -40, "style": "cidr-label" },
+    { "id": "lbl-broken", "text": "→ wrong domain",      "attachToNode": "node-broken",  "offsetY": -40, "style": "rule-text"  }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "http-redirect",
+      "triggerNode": "node-spawn",
+      "headline": "HTTP Redirects",
+      "body": "A 3xx response tells the client to make a new request to a different URL. The Location header says where. 302 Found = temporary, check back next time. 301 Moved Permanently = update your bookmarks, this URL is gone forever. Browsers follow these automatically.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "302-found",
+      "triggerNode": "node-302",
+      "headline": "302 Found (Temporary)",
+      "body": "This server temporarily redirects your request. It responds: HTTP/1.1 302 Found, Location: /new-path. Your client follows the Location header. Because it is temporary, browsers will check the original URL again next visit - no caching of the redirect.",
+      "highlightNodeId": "node-302"
+    },
+    {
+      "termKey": "redirect-loop",
+      "triggerNode": "node-loop",
+      "headline": "Redirect Loop",
+      "body": "This path redirects back to the previous server, which redirects here again - infinite loop. Browsers detect this and stop after 10-20 redirects with 'Too many redirects'. This is a server misconfiguration. Go back and follow the chain forward.",
+      "highlightNodeId": "node-loop"
+    },
+    {
+      "termKey": "301-permanent",
+      "triggerNode": "node-301",
+      "headline": "301 Moved Permanently",
+      "body": "This server permanently upgrades you to HTTPS: HTTP/1.1 301, Location: https://... Browsers cache this redirect, so next time they go straight to HTTPS without hitting port 80 at all. One path leads to a broken redirect - the other continues to the HTTPS server.",
+      "highlightNodeId": "node-301"
+    },
+    {
+      "termKey": "redirect-broken",
+      "triggerNode": "node-broken",
+      "headline": "Broken Redirect",
+      "body": "This redirect points to a domain that doesn't exist or has a misconfigured DNS entry. The browser follows the Location header and gets no response. Go back and take the working HTTPS path.",
+      "highlightNodeId": "node-broken"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-r1", "node-fw80", "node-r2", "node-302", "node-301", "node-dest"]
+}

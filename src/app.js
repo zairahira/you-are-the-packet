@@ -14,15 +14,35 @@ const screenMenu = document.getElementById('screen-menu')
 const screenGame = document.getElementById('screen-game')
 
 initGame(showMenu)
-showMenu()
+navigate()
+
+window.addEventListener('hashchange', navigate)
+
+function getHashLevel() {
+  const m = window.location.hash.match(/^#level\/(\d+)$/)
+  return m ? parseInt(m[1], 10) : null
+}
+
+function navigate() {
+  const levelId = getHashLevel()
+  if (levelId !== null) {
+    unmountMenu(screenMenu)
+    showGame(levelId)
+  } else {
+    showMenu()
+  }
+}
 
 function showMenu() {
   stopGame()
   screenGame.style.display = 'none'
   screenMenu.style.display = 'flex'
+  if (window.location.hash !== '') {
+    history.replaceState(null, '', window.location.pathname + window.location.search)
+  }
   mountMenu(screenMenu, levelId => {
     unmountMenu(screenMenu)
-    showGame(levelId)
+    window.location.hash = `#level/${levelId}`
   })
 }
 

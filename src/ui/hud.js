@@ -15,9 +15,10 @@ export default class HUD {
       ? `DEST: ${packet.domainName}${packet.destIP ? ` (${packet.destIP})` : ''}`
       : `DEST: ${packet.destIP}`
     if (this._portEl) {
-      if (packet.tlsState)      this._portEl.textContent = `TLS: ${packet.tlsState}`
-      else if (packet.tcpState) this._portEl.textContent = `TCP: ${packet.tcpState}`
-      else                      this._portEl.textContent = packet.portTag ? `PORT: ${packet.portTag}` : ''
+      if (packet.tlsState)        this._portEl.textContent = `TLS: ${packet.tlsState}`
+      else if (packet.tcpState)   this._portEl.textContent = `TCP: ${packet.tcpState}`
+      else if (packet.httpMethod) this._portEl.textContent = `HTTP: ${packet.httpMethod} ${packet.httpPath || ''}`
+      else                        this._portEl.textContent = packet.portTag ? `PORT: ${packet.portTag}` : ''
     }
   }
 

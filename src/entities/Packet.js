@@ -12,10 +12,14 @@ export default class Packet {
     this.currentNodeId = startNode.id
     this.srcIP         = playerData.srcIP
     this.destIP        = playerData.destIP
-    this.portTag       = playerData.portTag    || null
+    this.portTag       = playerData.portTag      || null
     this.tcpState      = null
-    this.tlsState      = playerData.tlsState   || null
-    this.domainName    = playerData.domainName || null
+    this.tlsState      = playerData.tlsState     || null
+    this.domainName    = playerData.domainName   || null
+    this.httpMethod    = playerData.httpMethod   || null
+    this.httpPath      = playerData.httpPath     || null
+    this.cookieToken   = null
+    this.requestCount  = playerData.requestCount || 0
     this.inputLocked   = false
 
     const pos = levelState.getNodeWorldPos(startNode.id)

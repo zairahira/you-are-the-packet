@@ -1,0 +1,132 @@
+{
+  "id": 13,
+  "title": "The Request",
+  "concept": "http-request",
+  "theory": {
+    "title": "HTTP: The Language of the Web",
+    "buildsOn": ["routing-table", "firewall", "ports"],
+    "recap": "You can route across subnets, pass firewall rules, and navigate multi-hop paths. Now your packet has arrived at the application layer - it carries an actual HTTP request, not just an IP address and port number.",
+    "newConcept": "http-request",
+    "plainObjective": "Route through two routers and a firewall, then at the web server choose the path that matches your HTTP method and resource.",
+    "summary": "HTTP is the protocol browsers and servers use to exchange web content. Every link you click and every image that loads is an HTTP request with a method and a path - and the server's response code tells you exactly what happened.",
+    "bodyParagraphs": [
+      {
+        "heading": "Methods and paths",
+        "text": "An HTTP request has two key parts: the method (GET, POST, PUT, DELETE) and the path (/index.html, /api/data). GET means 'give me this resource'. POST means 'here is data to process'. The server decides what to do based on both."
+      },
+      {
+        "heading": "Status codes",
+        "text": "The server replies with a status code. 200 OK means success. 404 Not Found means the path doesn't exist on this server. 405 Method Not Allowed means the path exists but doesn't accept your method - you tried to POST to a read-only resource."
+      },
+      {
+        "heading": "HTTP is above IP and TCP",
+        "text": "HTTP runs on top of TCP (which runs on top of IP). By the time an HTTP request arrives at a server, the IP routing and TCP handshake are already complete. HTTP is purely application-layer - the server reads your method and path and decides the response."
+      },
+      {
+        "heading": "Stateless by default",
+        "text": "HTTP is stateless: each request is independent. The server doesn't remember your previous requests unless something extra (like a cookie or session token) carries state between them. You will see how that works in the next level."
+      }
+    ],
+    "mission": "You carry a GET request for /index.html, destined for 10.50.1.5 on port 80.\n\nRoute through R1 and R2, pass the HTTP firewall, reach the web server, then choose the exit that matches your method and resource."
+  },
+  "gridWidth": 13,
+  "gridHeight": 7,
+  "tileSize": 64,
+  "player": {
+    "startNode": "node-spawn",
+    "srcIP": "10.0.5.5",
+    "destIP": "10.50.1.5",
+    "portTag": 80,
+    "httpMethod": "GET",
+    "httpPath": "/index.html"
+  },
+  "destination": { "nodeId": "node-200", "label": "200 OK" },
+  "nodes": [
+    { "id": "node-spawn",  "type": "spawn",     "col": 1, "row": 3 },
+    {
+      "id": "node-r1",     "type": "router",    "col": 3, "row": 3,
+      "checkpoint": true,
+      "label": "R1",
+      "routingTable": [
+        { "prefix": "10.50.0.0/16", "nextHop": "node-fw80",   "interface": "eth0" },
+        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead",   "interface": "eth1" }
+      ]
+    },
+    { "id": "node-dead",   "type": "exit",      "col": 3, "row": 1, "label": "0.0.0.0/0" },
+    {
+      "id": "node-fw80",   "type": "firewall",  "col": 5, "row": 3, "label": "HTTP FW",
+      "firewallRules": [
+        { "port": 80,  "protocol": "*", "action": "allow" },
+        { "port": "*", "protocol": "*", "action": "deny"  }
+      ]
+    },
+    {
+      "id": "node-r2",     "type": "router",    "col": 7, "row": 3,
+      "checkpoint": true,
+      "label": "R2",
+      "routingTable": [
+        { "prefix": "10.50.1.0/24", "nextHop": "node-hsrv",  "interface": "eth0" },
+        { "prefix": "10.50.2.0/24", "nextHop": "node-dead2", "interface": "eth1" }
+      ]
+    },
+    { "id": "node-dead2",  "type": "exit",      "col": 7, "row": 1, "label": "10.50.2.0/24" },
+    { "id": "node-hsrv",   "type": "http-node", "col": 9, "row": 3, "label": "web-server", "checkpoint": true },
+    { "id": "node-404",    "type": "exit",      "col": 9, "row": 1, "label": "404 Not Found" },
+    { "id": "node-405",    "type": "exit",      "col": 9, "row": 5, "label": "405 Method Not Allowed" },
+    { "id": "node-200",    "type": "destination","col": 11,"row": 3, "label": "200 OK" }
+  ],
+  "edges": [
+    { "from": "node-spawn",  "to": "node-r1",    "directed": false, "dropRate": 0 },
+    { "from": "node-r1",     "to": "node-dead",  "directed": false, "dropRate": 0 },
+    { "from": "node-r1",     "to": "node-fw80",  "directed": false, "dropRate": 0 },
+    { "from": "node-fw80",   "to": "node-r2",    "directed": false, "dropRate": 0 },
+    { "from": "node-r2",     "to": "node-dead2", "directed": false, "dropRate": 0 },
+    { "from": "node-r2",     "to": "node-hsrv",  "directed": false, "dropRate": 0 },
+    { "from": "node-hsrv",   "to": "node-404",   "directed": false, "dropRate": 0 },
+    { "from": "node-hsrv",   "to": "node-405",   "directed": false, "dropRate": 0 },
+    { "from": "node-hsrv",   "to": "node-200",   "directed": false, "dropRate": 0 }
+  ],
+  "firewallRules": [],
+  "labels": [
+    { "id": "lbl-src",    "text": "YOU: 10.0.5.5",       "attachToNode": "node-spawn", "offsetY": -40, "style": "ip-label"   },
+    { "id": "lbl-dest",   "text": "DEST: 10.50.1.5",     "attachToNode": "node-spawn", "offsetY": -58, "style": "ip-label"   },
+    { "id": "lbl-method", "text": "GET /index.html",      "attachToNode": "node-spawn", "offsetY": -76, "style": "port-label" },
+    { "id": "lbl-fw",     "text": "ALLOWS: port 80",      "attachToNode": "node-fw80",  "offsetY": -40, "style": "rule-text"  },
+    { "id": "lbl-404",    "text": "GET /secret",          "attachToNode": "node-404",   "offsetY": -40, "style": "rule-text"  },
+    { "id": "lbl-405",    "text": "POST /index.html",     "attachToNode": "node-405",   "offsetY": -40, "style": "rule-text"  },
+    { "id": "lbl-200",    "text": "GET /index.html → 200","attachToNode": "node-200",   "offsetY": -40, "style": "cidr-label" }
+  ],
+  "termIntroductions": [
+    {
+      "termKey": "http-request",
+      "triggerNode": "node-spawn",
+      "headline": "HTTP Request",
+      "body": "HTTP (HyperText Transfer Protocol) is how browsers and servers talk. Every web request has a method - GET means 'give me this resource'. The path (/index.html) says which resource. Together they form the request line: GET /index.html HTTP/1.1.",
+      "highlightNodeId": "node-spawn"
+    },
+    {
+      "termKey": "http-200",
+      "triggerNode": "node-hsrv",
+      "headline": "HTTP Response Codes",
+      "body": "The server responds with a status code. 200 OK = success. 404 = the path you requested doesn't exist on this server. 405 = path exists but this method isn't allowed. Choose the exit matching your packet: GET /index.html.",
+      "highlightNodeId": "node-hsrv"
+    },
+    {
+      "termKey": "http-404",
+      "triggerNode": "node-404",
+      "headline": "404 Not Found",
+      "body": "The path /secret doesn't exist on this server. The server looked for that resource and couldn't find it. Your packet asked for /index.html - go back and take the correct exit.",
+      "highlightNodeId": "node-404"
+    },
+    {
+      "termKey": "http-405",
+      "triggerNode": "node-405",
+      "headline": "405 Method Not Allowed",
+      "body": "POST /index.html is rejected - this endpoint is read-only and doesn't accept POST. Your packet is a GET request, not POST. Go back and choose the matching path.",
+      "highlightNodeId": "node-405"
+    }
+  ],
+  "checkpointBehavior": "last-checkpoint",
+  "completionCondition": "reach-destination",
+  "correctPath": ["node-spawn", "node-r1", "node-fw80", "node-r2", "node-hsrv", "node-200"]
+}

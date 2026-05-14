@@ -41,6 +41,18 @@ export function initGame(onExit) {
       if (_levelData?.theory) _theoryPanel.showMidGame(_levelData)
     })
   }
+
+  const resetBtn = document.getElementById('btn-reset')
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (_levelData) startLevel(_levelData.id)
+    })
+  }
+
+  const menuBtn = document.getElementById('btn-menu')
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => { stopGame(); _onExit?.() })
+  }
 }
 
 export function startLevel(levelId) {
@@ -65,17 +77,22 @@ export function startLevel(levelId) {
   _hud.init(_levelData, _packet)
   _blockedNotice.hide()
 
-  const helpBtn = document.getElementById('btn-help')
-  if (helpBtn) helpBtn.style.display = 'none'
+  const helpBtn  = document.getElementById('btn-help')
+  const resetBtn = document.getElementById('btn-reset')
+  if (helpBtn)  helpBtn.style.display  = 'none'
+  if (resetBtn) resetBtn.style.display = 'none'
 
   if (_levelData.theory) {
     _packet.inputLocked = true
     _theoryPanel.show(_levelData, () => {
       _packet.inputLocked = false
-      if (helpBtn) helpBtn.style.display = 'block'
+      if (helpBtn)  helpBtn.style.display  = 'block'
+      if (resetBtn) resetBtn.style.display = 'block'
       _firePendingIntros(_levelState.playerStartNode)
     })
   } else {
+    if (helpBtn)  helpBtn.style.display  = 'block'
+    if (resetBtn) resetBtn.style.display = 'block'
     _firePendingIntros(_levelState.playerStartNode)
   }
 
@@ -102,8 +119,10 @@ export function stopGame() {
   _theoryPanel?.hide()
   _blockedNotice?.hide()
   _replayOverlay?.hide()
-  const helpBtn = document.getElementById('btn-help')
-  if (helpBtn) helpBtn.style.display = 'none'
+  const helpBtn  = document.getElementById('btn-help')
+  const resetBtn = document.getElementById('btn-reset')
+  if (helpBtn)  helpBtn.style.display  = 'none'
+  if (resetBtn) resetBtn.style.display = 'none'
 }
 
 function _teardown() {
@@ -221,8 +240,32 @@ function _onKey(e) {
     }
   }
 
-  // Routing check when leaving a router
-  if (fromNode.type === 'router' && fromNode.routingTable?.length) {
+  // Session gate check
+  if (targetNode.type === 'session-gate') {
+    if (!_packet.cookieToken) {
+      _blockedNotice.show('No session cookie - visit the login server first to authenticate.')
+      _packet.playBlocked()
+      _checkpointSystem.respawn(_packet)
+      _hud.update(_packet)
+      _inputCooldown = 400
+      return
+    }
+  }
+
+  // Rate limit check
+  if (targetNode.type === 'rate-limit') {
+    if (_packet.requestCount > (targetNode.threshold || 0)) {
+      _blockedNotice.show(`Rate limit exceeded - server is overwhelmed (${_packet.requestCount} req/s > ${targetNode.threshold} limit). Find the anycast path.`)
+      _packet.playBlocked()
+      _checkpointSystem.respawn(_packet)
+      _hud.update(_packet)
+      _inputCooldown = 400
+      return
+    }
+  }
+
+  // Routing check when leaving a router or AS node
+  if ((fromNode.type === 'router' || fromNode.type === 'as-node') && fromNode.routingTable?.length) {
     if (!_packet.srcIP) {
       _blockedNotice.show('No source IP - find a DHCP server to get an address first.')
       _packet.playBlocked()
@@ -231,15 +274,18 @@ function _onKey(e) {
       _inputCooldown = 400
       return
     }
-    const result = _routingEngine.validateMove(_packet, fromNode, targetNode)
-    if (!result.valid) {
-      _blockedNotice.show(`Wrong exit - ${_packet.destIP} doesn't match this route. Check the routing table.`)
-      _theoryPanel.highlight(fromNode.id, result.matchedRoute?.prefix)
-      _packet.playBlocked()
-      _checkpointSystem.respawn(_packet)
-      _hud.update(_packet)
-      _inputCooldown = 400
-      return
+    if (_packet.destIP) {
+      const result = _routingEngine.validateMove(_packet, fromNode, targetNode)
+      if (!result.valid) {
+        const nodeLabel = fromNode.type === 'as-node' ? 'BGP table' : 'routing table'
+        _blockedNotice.show(`Wrong exit - ${_packet.destIP} doesn't match this route. Check the ${nodeLabel}.`)
+        _theoryPanel.highlight(fromNode.id, result.matchedRoute?.prefix)
+        _packet.playBlocked()
+        _checkpointSystem.respawn(_packet)
+        _hud.update(_packet)
+        _inputCooldown = 400
+        return
+      }
     }
   }
 
@@ -258,14 +304,23 @@ function _onArrived(node) {
     else if (node.tlsStep === 'server-cert'   && _packet.tlsState === 'CLIENT_HELLO_SENT')               _packet.tlsState = 'SERVER_CERT_RECEIVED'
     else if (node.tlsStep === 'change-cipher' && _packet.tlsState === 'SERVER_CERT_RECEIVED')            _packet.tlsState = 'TLS_ESTABLISHED'
   }
-  if (node.type === 'dns-resolver' && node.dnsRecord && !_packet.destIP) {
-    _packet.destIP = node.dnsRecord.resolvedIP
+  if (node.type === 'dns-resolver' && node.dnsRecord) {
+    if (node.dnssec === false && node.dnsRecord.poisonedIP) {
+      _packet.destIP = node.dnsRecord.poisonedIP
+    } else if (node.dnssec === true) {
+      _packet.destIP = node.dnsRecord.resolvedIP
+    } else if (!_packet.destIP) {
+      _packet.destIP = node.dnsRecord.resolvedIP
+    }
   }
   if (node.type === 'nat-gateway' && node.publicIP) {
     _packet.srcIP = node.publicIP
   }
   if (node.type === 'dhcp-server' && node.dhcpConfig) {
     _packet.srcIP = node.dhcpConfig.assignedIP
+  }
+  if (node.type === 'http-node' && node.setCookie) {
+    _packet.cookieToken = node.setCookie
   }
   if (node.checkpoint) _checkpointSystem.save(_packet)
   _firePendingIntros(node)
@@ -321,7 +376,7 @@ function _onLevelComplete() {
   } catch {}
 
   setTimeout(() => {
-    _showTransition(_levelData.id, _levelData.title, _levelData.id < 12 ? _levelData.id + 1 : null)
+    _showTransition(_levelData.id, _levelData.title, _levelData.id < 22 ? _levelData.id + 1 : null)
   }, 700)
 }
 
@@ -353,10 +408,6 @@ function _showTransition(levelId, title, nextId) {
   if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null }
   document.removeEventListener('keydown', _onKey)
 
-  const nextBtn = nextId
-    ? `<button class="btn-primary" id="btn-next">Next Level &rarr;</button>`
-    : `<button class="btn-primary" id="btn-menu-t">Back to Menu</button>`
-
   const summary = _levelData?.theory?.summary
   const summaryHtml = summary
     ? `<p class="modal-summary">${summary}</p>`
@@ -366,17 +417,22 @@ function _showTransition(levelId, title, nextId) {
     ? `<button class="btn-ghost" id="btn-recap">Watch Recap</button>`
     : ''
 
+  const nextBtn = nextId
+    ? `<button class="btn-primary" id="btn-next">Next Level &rarr;</button>`
+    : ''
+
   _showModal(`
     <div class="modal-badge">PACKET DELIVERED</div>
     <p class="modal-sub">Level ${levelId}: ${title}</p>
     ${summaryHtml}
     ${nextBtn}
+    <button class="btn-ghost" id="btn-again">Play Again</button>
     ${recapBtn}
     <button class="btn-ghost" id="btn-menu-t2">Main Menu</button>
   `)
 
-  if (nextId) document.getElementById('btn-next').onclick = () => { _hideModal(); startLevel(nextId) }
-  else        document.getElementById('btn-menu-t').onclick = () => { stopGame(); _onExit?.() }
+  if (nextId) document.getElementById('btn-next').onclick = () => { _hideModal(); window.location.hash = `#level/${nextId}` }
+  document.getElementById('btn-again').onclick = () => { _hideModal(); startLevel(levelId) }
   document.getElementById('btn-menu-t2').onclick = () => { stopGame(); _onExit?.() }
   if (recapBtn) document.getElementById('btn-recap').onclick = () => { _hideModal(); _startReplay() }
 }
@@ -398,6 +454,7 @@ function _startReplay() {
 
   _replayOverlay.showIntro()
   _replayOverlay.onNext(() => { if (!_replayMoving) _advanceReplay() })
+  _replayOverlay.onPrev(() => { if (!_replayMoving) _retreatReplay() })
   document.addEventListener('keydown', _replayKeyHandler)
 
   _running  = true
@@ -407,9 +464,13 @@ function _startReplay() {
 
 function _replayKeyHandler(e) {
   if (e.key === 'Escape') { e.preventDefault(); _exitReplay(); return }
-  if ((e.key === ' ' || e.key === 'ArrowRight') && !_replayMoving) {
+  if (e.key === ' ' && !_replayMoving) {
     e.preventDefault()
     _advanceReplay()
+  }
+  if (e.key === 'ArrowLeft' && !_replayMoving) {
+    e.preventDefault()
+    _retreatReplay()
   }
 }
 
@@ -447,6 +508,46 @@ function _advanceReplay() {
   })
 }
 
+function _retreatReplay() {
+  if (_replayStepIndex <= 0) return
+  const path     = _levelData.correctPath
+  const newIndex = _replayStepIndex - 1
+
+  // Recompute packet state from scratch up to newIndex
+  _packet.srcIP        = _levelData.player.srcIP
+  _packet.destIP       = _levelData.player.destIP
+  _packet.portTag      = _levelData.player.portTag      || null
+  _packet.tcpState     = null
+  _packet.tlsState     = _levelData.player.tlsState     || null
+  _packet.cookieToken  = null
+  _packet.requestCount = _levelData.player.requestCount || 0
+
+  // Apply arrivals up to newIndex-1 to capture the state before the target node
+  for (let i = 1; i < newIndex; i++) {
+    const n = _levelState.getNode(path[i])
+    if (n) _replayOnArrived(n)
+  }
+  const prevSrcIP  = _packet.srcIP
+  const prevDestIP = _packet.destIP
+
+  // Apply arrival at newIndex (the node we're stepping back to)
+  const targetNode = newIndex > 0 ? _levelState.getNode(path[newIndex]) : null
+  if (targetNode) _replayOnArrived(targetNode)
+
+  _packet.currentNodeId = newIndex > 0 ? path[newIndex] : _levelData.player.startNode
+  _packet.snapToNode()
+  _hud.update(_packet)
+  _replayStepIndex = newIndex
+
+  if (newIndex === 0) {
+    _replayOverlay.showIntro()
+  } else {
+    const total  = path.length - 1
+    const isLast = newIndex === path.length - 1
+    _replayOverlay.showStep(newIndex, total, _getReplayStepExplanation(targetNode, prevSrcIP, prevDestIP), isLast)
+  }
+}
+
 function _replayFinish() {
   document.removeEventListener('keydown', _replayKeyHandler)
   _replayOverlay.hide()
@@ -463,7 +564,7 @@ function _exitReplay() {
   _replayOverlay.hide()
   _running = false
   if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null }
-  _showTransition(_levelData.id, _levelData.title, _levelData.id < 12 ? _levelData.id + 1 : null)
+  _showTransition(_levelData.id, _levelData.title, _levelData.id < 22 ? _levelData.id + 1 : null)
 }
 
 function _replayOnArrived(node) {
@@ -477,14 +578,23 @@ function _replayOnArrived(node) {
     else if (node.tlsStep === 'server-cert'   && _packet.tlsState === 'CLIENT_HELLO_SENT')               _packet.tlsState = 'SERVER_CERT_RECEIVED'
     else if (node.tlsStep === 'change-cipher' && _packet.tlsState === 'SERVER_CERT_RECEIVED')            _packet.tlsState = 'TLS_ESTABLISHED'
   }
-  if (node.type === 'dns-resolver' && node.dnsRecord && !_packet.destIP) {
-    _packet.destIP = node.dnsRecord.resolvedIP
+  if (node.type === 'dns-resolver' && node.dnsRecord) {
+    if (node.dnssec === false && node.dnsRecord.poisonedIP) {
+      _packet.destIP = node.dnsRecord.poisonedIP
+    } else if (node.dnssec === true) {
+      _packet.destIP = node.dnsRecord.resolvedIP
+    } else if (!_packet.destIP) {
+      _packet.destIP = node.dnsRecord.resolvedIP
+    }
   }
   if (node.type === 'nat-gateway' && node.publicIP) {
     _packet.srcIP = node.publicIP
   }
   if (node.type === 'dhcp-server' && node.dhcpConfig) {
     _packet.srcIP = node.dhcpConfig.assignedIP
+  }
+  if (node.type === 'http-node' && node.setCookie) {
+    _packet.cookieToken = node.setCookie
   }
 }
 
@@ -522,6 +632,20 @@ function _getReplayStepExplanation(node, prevSrcIP, prevDestIP) {
       }
       return msgs[node.tlsStep] || `TLS step: ${node.tlsStep}.`
     }
+    case 'http-node': {
+      const cookie = node.setCookie ? ` Server sets session cookie.` : ''
+      return `HTTP server: ${_packet.httpMethod || 'GET'} ${_packet.httpPath || '/'} → response received.${cookie}`
+    }
+    case 'session-gate':
+      return `Session gate: cookie token verified. Access granted.`
+    case 'as-node': {
+      const route = _findMatchingRoute(node.routingTable, _packet.destIP)
+      const lbl   = node.label ? ` ${node.label}` : ''
+      if (route) return `AS node${lbl}: ${_packet.destIP} matches ${route.prefix} - exits via ${route.interface}.`
+      return `AS node${lbl}: BGP routing toward ${_packet.destIP}.`
+    }
+    case 'rate-limit':
+      return `Rate limiter: ${_packet.requestCount} req/s is within threshold. Packet passes.`
     case 'destination': {
       const lbl = node.label || 'destination'
       return `Packet delivered to ${lbl}.`

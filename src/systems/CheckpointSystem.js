@@ -10,12 +10,13 @@ export default class CheckpointSystem {
 
   save(packet) {
     this.savedState = {
-      nodeId:    packet.currentNodeId,
-      srcIP:     packet.srcIP,
-      destIP:    packet.destIP,
-      portTag:   packet.portTag,
-      tcpState:  packet.tcpState,
-      tlsState:  packet.tlsState,
+      nodeId:       packet.currentNodeId,
+      srcIP:        packet.srcIP,
+      destIP:       packet.destIP,
+      portTag:      packet.portTag,
+      tcpState:     packet.tcpState,
+      tlsState:     packet.tlsState,
+      cookieToken:  packet.cookieToken,
     }
   }
 
@@ -27,6 +28,7 @@ export default class CheckpointSystem {
     packet.portTag       = this.savedState.portTag
     packet.tcpState      = this.savedState.tcpState
     packet.tlsState      = this.savedState.tlsState
+    packet.cookieToken   = this.savedState.cookieToken
     packet.snapToNode()
   }
 }

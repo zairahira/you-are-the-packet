@@ -22,7 +22,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      min-height: 100%;
+      height: 100%;
       padding: 32px 24px;
       gap: 24px;
       overflow-y: auto;
@@ -151,6 +151,20 @@
     #hud-arrow { color: #858591; flex: 0 0 auto; }
     #hud-dest  { color: #acd157; font-weight: bold; flex: 0 0 auto; }
     #hud-port  { color: #f1be32; flex: 0 0 auto; }
+
+    #btn-menu {
+      flex: 0 0 auto;
+      margin-left: 16px;
+      background: transparent;
+      border: 1px solid #3b3b4f;
+      color: #858591;
+      font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.7rem;
+      padding: 3px 10px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    #btn-menu:hover { border-color: #dbb8ff; color: #dbb8ff; }
 
     /* ── Game body (theory panel + canvas) ── */
     #game-body {
@@ -328,12 +342,11 @@
       min-height: 0;
     }
 
-    /* ── Help (?) button ── */
-    #btn-help {
+    /* ── Help (?) and Reset buttons ── */
+    #btn-help, #btn-reset {
       display: none;
       position: absolute;
       top: 12px;
-      right: 12px;
       width: 32px;
       height: 32px;
       background: #2a2a40;
@@ -347,7 +360,9 @@
       line-height: 1;
       padding: 0;
     }
-    #btn-help:hover { background: #3b3b5a; }
+    #btn-help  { right: 12px; }
+    #btn-reset { right: 52px; }
+    #btn-help:hover, #btn-reset:hover { background: #3b3b5a; }
 
     /* ── Replay badge ── */
     #replay-badge {
@@ -403,7 +418,7 @@
       font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
     }
 
-    #btn-replay-next {
+    #btn-replay-next, #btn-replay-prev {
       background: transparent;
       border: 1px solid #dbb8ff;
       color: #dbb8ff;
@@ -413,7 +428,8 @@
       cursor: pointer;
       line-height: 1;
     }
-    #btn-replay-next:hover { background: rgba(219, 184, 255, 0.1); }
+    #btn-replay-next:hover, #btn-replay-prev:hover { background: rgba(219, 184, 255, 0.1); }
+    #btn-replay-prev { visibility: hidden; }
 
     /* ── Blocked notice toast ── */
     #blocked-notice {
@@ -602,16 +618,19 @@
       <span id="hud-arrow">-&gt;</span>
       <span id="hud-dest"></span>
       <span id="hud-port"></span>
+      <button id="btn-menu">Go to Main Menu</button>
     </div>
     <div id="game-body">
       <div id="theory-panel"></div>
       <div id="canvas-wrap">
         <canvas id="game-canvas"></canvas>
         <button id="btn-help" title="Show level info">?</button>
+        <button id="btn-reset" title="Restart level">&#8635;</button>
         <div id="replay-badge">REPLAY <span id="replay-step-counter"></span></div>
         <div id="recap-step">
           <div id="recap-step-text"></div>
           <div class="recap-controls">
+            <button id="btn-replay-prev">←</button>
             <span id="recap-step-hint"></span>
             <button id="btn-replay-next">→</button>
           </div>
