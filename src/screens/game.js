@@ -11,12 +11,14 @@ import Callout             from '../ui/callout.js'
 import TheoryPanel         from '../ui/TheoryPanel.js'
 import BlockedNotice       from '../ui/BlockedNotice.js'
 import ReplayOverlay       from '../ui/ReplayOverlay.js'
+import RoutingOverlay      from '../ui/RoutingOverlay.js'
+import AudioSystem         from '../systems/AudioSystem.js'
 
 let _canvas, _ctx, _canvasW, _canvasH
 let _levelData, _levelState, _packet
 let _levelLoader
-let _routingEngine, _firewallChecker, _checkpointSystem, _termTracker
-let _hud, _callout, _theoryPanel, _blockedNotice, _replayOverlay
+let _routingEngine, _firewallChecker, _checkpointSystem, _termTracker, _audio
+let _hud, _callout, _theoryPanel, _blockedNotice, _replayOverlay, _routingOverlay
 let _rafId         = null
 let _lastTime      = 0
 let _ro            = null
@@ -25,6 +27,7 @@ let _running       = false
 let _onExit        = null
 let _replayStepIndex = 0
 let _replayMoving    = false
+let _visitedEdges  = new Set()
 
 export function initGame(onExit) {
   _canvas        = document.getElementById('game-canvas')
@@ -33,19 +36,20 @@ export function initGame(onExit) {
   _theoryPanel   = new TheoryPanel()
   _blockedNotice = new BlockedNotice()
   _replayOverlay = new ReplayOverlay()
+  _routingOverlay = new RoutingOverlay()
   _onExit        = onExit
 
   const helpBtn = document.getElementById('btn-help')
   if (helpBtn) {
     helpBtn.addEventListener('click', () => {
-      if (_levelData?.theory) _theoryPanel.showMidGame(_levelData)
+      if (_levelData) _theoryPanel.showMidGame(_levelData)
     })
   }
 
   const resetBtn = document.getElementById('btn-reset')
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
-      if (_levelData) startLevel(_levelData.id)
+      if (_levelData) startLevel(_levelData.id, true)
     })
   }
 
@@ -55,7 +59,7 @@ export function initGame(onExit) {
   }
 }
 
-export function startLevel(levelId) {
+export function startLevel(levelId, skipBriefing = false) {
   _teardown()
 
   _levelData = LEVELS[levelId]
@@ -66,6 +70,7 @@ export function startLevel(levelId) {
   _firewallChecker  = new FirewallChecker()
   _checkpointSystem = new CheckpointSystem()
   _termTracker      = new TermTracker()
+  _audio            = _audio || new AudioSystem()
 
   const { ctx, w, h } = setupCanvas(_canvas)
   _ctx = ctx; _canvasW = w; _canvasH = h
@@ -76,21 +81,24 @@ export function startLevel(levelId) {
 
   _hud.init(_levelData, _packet)
   _blockedNotice.hide()
+  _routingOverlay.hide()
+  _visitedEdges = new Set()
 
   const helpBtn  = document.getElementById('btn-help')
   const resetBtn = document.getElementById('btn-reset')
   if (helpBtn)  helpBtn.style.display  = 'none'
   if (resetBtn) resetBtn.style.display = 'none'
 
-  if (_levelData.theory) {
+  if (_levelData.theory && !skipBriefing) {
     _packet.inputLocked = true
-    _theoryPanel.show(_levelData, () => {
+    _theoryPanel.showBriefing(_levelData, () => {
       _packet.inputLocked = false
       if (helpBtn)  helpBtn.style.display  = 'block'
       if (resetBtn) resetBtn.style.display = 'block'
       _firePendingIntros(_levelState.playerStartNode)
     })
   } else {
+    if (_levelData.theory) _theoryPanel.showIdleState(_levelData)
     if (helpBtn)  helpBtn.style.display  = 'block'
     if (resetBtn) resetBtn.style.display = 'block'
     _firePendingIntros(_levelState.playerStartNode)
@@ -119,6 +127,7 @@ export function stopGame() {
   _theoryPanel?.hide()
   _blockedNotice?.hide()
   _replayOverlay?.hide()
+  _routingOverlay?.hide()
   const helpBtn  = document.getElementById('btn-help')
   const resetBtn = document.getElementById('btn-reset')
   if (helpBtn)  helpBtn.style.display  = 'none'
@@ -142,7 +151,7 @@ function _tick(now) {
   _inputCooldown = Math.max(0, _inputCooldown - dt)
 
   _packet.update(dt)
-  drawWorld(_ctx, _canvasW, _canvasH, _levelData, _levelState, _packet)
+  drawWorld(_ctx, _canvasW, _canvasH, _levelData, _levelState, _packet, _visitedEdges)
 
   _rafId = requestAnimationFrame(_tick)
 }
@@ -172,6 +181,7 @@ function _onKey(e) {
   if (edge && (edge.dropRate || 0) >= 1) {
     _blockedNotice.show('Link unstable - packet dropped. Try another route.')
     _packet.playBlocked()
+    _audio.blocked()
     _checkpointSystem.respawn(_packet)
     _hud.update(_packet)
     _inputCooldown = 400
@@ -279,8 +289,9 @@ function _onKey(e) {
       if (!result.valid) {
         const nodeLabel = fromNode.type === 'as-node' ? 'BGP table' : 'routing table'
         _blockedNotice.show(`Wrong exit - ${_packet.destIP} doesn't match this route. Check the ${nodeLabel}.`)
-        _theoryPanel.highlight(fromNode.id, result.matchedRoute?.prefix)
+        _theoryPanel.showWrongRoute(fromNode.id, _packet.destIP, result.matchedRoute)
         _packet.playBlocked()
+        _audio.blocked()
         _checkpointSystem.respawn(_packet)
         _hud.update(_packet)
         _inputCooldown = 400
@@ -289,15 +300,21 @@ function _onKey(e) {
     }
   }
 
+  const fromId = _packet.currentNodeId
+  _routingOverlay.hide()
   _inputCooldown = 180
-  _packet.moveTo(targetNode, () => _onArrived(targetNode))
+  _audio.hop()
+  _packet.moveTo(targetNode, () => {
+    _visitedEdges.add(`${fromId}→${targetNode.id}`)
+    _onArrived(targetNode)
+  })
 }
 
 function _onArrived(node) {
   if (node.type === 'tcp-node' && node.tcpStep) {
-    if      (node.tcpStep === 'syn'     && (!_packet.tcpState || _packet.tcpState === 'IDLE'))         _packet.tcpState = 'SYN_SENT'
-    else if (node.tcpStep === 'syn-ack' && _packet.tcpState === 'SYN_SENT')                            _packet.tcpState = 'SYN_ACK_RECEIVED'
-    else if (node.tcpStep === 'ack'     && _packet.tcpState === 'SYN_ACK_RECEIVED')                    _packet.tcpState = 'ESTABLISHED'
+    if      (node.tcpStep === 'syn'     && (!_packet.tcpState || _packet.tcpState === 'IDLE'))         { _packet.tcpState = 'SYN_SENT';         _audio.syn()    }
+    else if (node.tcpStep === 'syn-ack' && _packet.tcpState === 'SYN_SENT')                            { _packet.tcpState = 'SYN_ACK_RECEIVED'; _audio.synAck() }
+    else if (node.tcpStep === 'ack'     && _packet.tcpState === 'SYN_ACK_RECEIVED')                    { _packet.tcpState = 'ESTABLISHED';       _audio.ack()    }
   }
   if (node.type === 'tls-node' && node.tlsStep) {
     if      (node.tlsStep === 'client-hello'  && (!_packet.tlsState || _packet.tlsState === 'TLS_IDLE'))  _packet.tlsState = 'CLIENT_HELLO_SENT'
@@ -326,6 +343,46 @@ function _onArrived(node) {
   _firePendingIntros(node)
   if (node.type === 'destination') { _onLevelComplete(); return }
   _hud.update(_packet)
+
+  const isRoutingNode = (node.type === 'router' || node.type === 'as-node') && node.routingTable?.length
+  if (isRoutingNode) {
+    _theoryPanel.focusRouter(node.id, _packet.destIP)
+    const canvasWrap = document.getElementById('canvas-wrap')
+    const worldPos   = _levelState.getNodeWorldPos(node.id)
+    _routingOverlay.show(node, _packet.destIP, canvasWrap, worldPos, _onRouteChosen)
+  } else {
+    _theoryPanel.clearFocus()
+    _routingOverlay.hide()
+  }
+}
+
+function _onRouteChosen(route, bestRoute) {
+  if (_packet._moving || _packet.inputLocked || _inputCooldown > 0) return
+
+  const isCorrect = bestRoute && route.nextHop === bestRoute.nextHop
+  if (!isCorrect) {
+    const msg = bestRoute
+      ? `${_packet.destIP} doesn't fall in ${route.prefix}. Find the matching prefix.`
+      : 'No matching route for your destination.'
+    _routingOverlay.showError(msg)
+    _theoryPanel.showWrongRoute(_packet.currentNodeId, _packet.destIP, bestRoute)
+    _packet.playBlocked()
+    _audio.blocked()
+    _inputCooldown = 400
+    return
+  }
+
+  const targetNode = _levelState.getNode(route.nextHop)
+  if (!targetNode) return
+
+  const fromId = _packet.currentNodeId
+  _routingOverlay.hide()
+  _inputCooldown = 180
+  _audio.hop()
+  _packet.moveTo(targetNode, () => {
+    _visitedEdges.add(`${fromId}→${targetNode.id}`)
+    _onArrived(targetNode)
+  })
 }
 
 function _checkTcpTransition(state, tcpStep) {
@@ -368,6 +425,7 @@ function _firePendingIntros(node) {
 
 function _onLevelComplete() {
   _packet.playSuccess()
+  _audio.success()
   _callout.hide()
   try {
     const p = JSON.parse(localStorage.getItem('yatp_progress') || '{}')
@@ -384,6 +442,7 @@ function _showPause() {
   _running = false
   if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null }
   document.removeEventListener('keydown', _onKey)
+  _routingOverlay?.hide()
 
   _showModal(`
     <h2>PAUSED</h2>

@@ -58,6 +58,7 @@
       display: none;
       flex-direction: column;
       height: 100%;
+      position: relative;
     }
 
     /* ── Menu typography ── */
@@ -275,6 +276,37 @@
       color: #acd157;
     }
 
+    /* ── Router focus: active when player is at this router ── */
+    .rt-router-focus {
+      padding: 8px;
+      border: 1px solid rgba(219, 184, 255, 0.6);
+      background: rgba(219, 184, 255, 0.04);
+      animation: rt-focus-pulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes rt-focus-pulse {
+      0%, 100% { border-color: rgba(219, 184, 255, 0.6); box-shadow: none; }
+      50%       { border-color: #dbb8ff; box-shadow: 0 0 10px 2px rgba(219, 184, 255, 0.18); }
+    }
+
+    .rt-here-badge {
+      font-size: 0.58rem;
+      color: #dbb8ff;
+      background: rgba(219, 184, 255, 0.14);
+      border: 1px solid rgba(219, 184, 255, 0.45);
+      padding: 1px 7px;
+      margin-left: 10px;
+      letter-spacing: 0.08em;
+      vertical-align: middle;
+      text-transform: uppercase;
+    }
+
+    .rt-table tr.rt-active-match td {
+      color: #f1be32;
+      background: rgba(241, 190, 50, 0.15);
+      font-weight: bold;
+    }
+
     .theory-section-label {
       font-size: 0.68rem;
       font-weight: bold;
@@ -324,6 +356,173 @@
     .ip-val {
       color: #99c9ff;
       font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+    }
+
+    /* ── Briefing overlay (Idea 3: full-screen mission brief before gameplay) ── */
+    #briefing-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 300;
+      background: #0a0a23;
+      overflow-y: auto;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px 64px;
+    }
+
+    .briefing-inner {
+      width: 100%;
+      max-width: 700px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .brief-header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #3b3b4f;
+    }
+
+    .brief-tag {
+      font-size: 0.65rem;
+      color: #dbb8ff;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .brief-title {
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      color: #f5f6f7;
+      font-weight: bold;
+      letter-spacing: 0.02em;
+      line-height: 1.25;
+      margin: 0;
+      font-family: inherit;
+    }
+
+    .brief-label {
+      font-size: 0.65rem;
+      font-weight: bold;
+      color: #dbb8ff;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      border-bottom: 1px solid #3b3b4f;
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+    }
+
+    .brief-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .brief-recap {
+      font-size: 0.88rem;
+      color: #dbb8ff;
+      line-height: 1.7;
+      margin: 0;
+      padding: 10px 14px;
+      background: rgba(219, 184, 255, 0.06);
+      border-left: 2px solid #dbb8ff;
+    }
+
+    .brief-mission {
+      font-size: 0.95rem;
+      color: #f5f6f7;
+      line-height: 1.7;
+      margin: 0 0 8px;
+      padding: 12px 14px;
+      background: rgba(172, 209, 87, 0.08);
+      border-left: 3px solid #acd157;
+    }
+
+    .brief-start-btn {
+      align-self: flex-start;
+      margin-top: 8px;
+      padding: 14px 40px;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Canvas routing table overlay (Idea 2 + 4: overlay near node, clickable rows) ── */
+    #canvas-routing-overlay {
+      display: none;
+      position: absolute;
+      z-index: 50;
+      background: rgba(10, 10, 35, 0.97);
+      border: 1px solid #99c9ff;
+      padding: 12px 14px;
+      min-width: 220px;
+      max-width: 300px;
+      pointer-events: auto;
+    }
+
+    .cro-title {
+      font-size: 0.68rem;
+      color: #99c9ff;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    .cro-table {
+      font-size: 0.8rem;
+      font-family: 'Fira Mono', Consolas, 'Courier New', monospace;
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    .cro-table th {
+      color: #858591;
+      text-align: left;
+      padding: 2px 6px;
+      border-bottom: 1px solid #3b3b4f;
+      font-weight: normal;
+      font-size: 0.68rem;
+    }
+
+    .cro-table td { color: #d0d0d5; padding: 6px 6px; }
+
+    .cro-table tr.cro-row { cursor: pointer; }
+    .cro-table tr.cro-row:hover td { background: rgba(153, 201, 255, 0.09); color: #f5f6f7; }
+
+    .cro-hint {
+      font-size: 0.62rem;
+      color: #858591;
+      margin-top: 8px;
+      letter-spacing: 0.04em;
+    }
+
+    .cro-error {
+      font-size: 0.75rem;
+      color: #ffadad;
+      background: rgba(255, 173, 173, 0.1);
+      border-left: 2px solid #ffadad;
+      padding: 6px 8px;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    /* ── Idea 6: wrong-move explanation in panel ── */
+    .theory-error-notice {
+      font-size: 0.8rem;
+      color: #ffadad;
+      background: rgba(255, 173, 173, 0.08);
+      border-left: 2px solid #ffadad;
+      padding: 8px 12px;
+      line-height: 1.55;
+      animation: theory-error-fade 4s ease-in-out forwards;
+    }
+
+    @keyframes theory-error-fade {
+      0%, 65% { opacity: 1; }
+      100%     { opacity: 0; }
     }
 
     /* ── Canvas wrapper ── */
@@ -611,6 +810,7 @@
 
   <!-- Game screen -->
   <div id="screen-game">
+    <div id="briefing-overlay"></div>
     <div id="hud">
       <span id="hud-level"></span>
       <span id="hud-sep"></span>
@@ -624,6 +824,7 @@
       <div id="theory-panel"></div>
       <div id="canvas-wrap">
         <canvas id="game-canvas"></canvas>
+        <div id="canvas-routing-overlay"></div>
         <button id="btn-help" title="Show level info">?</button>
         <button id="btn-reset" title="Restart level">&#8635;</button>
         <div id="replay-badge">REPLAY <span id="replay-step-counter"></span></div>

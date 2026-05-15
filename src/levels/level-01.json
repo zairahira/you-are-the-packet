@@ -19,8 +19,12 @@
         "text": "An interface is a physical (or virtual) port on the router - the socket where a cable plugs in. eth0 is the first Ethernet port, eth1 the second, and so on. Think of a router as a building with multiple doors: eth0 leads to one corridor, eth1 to another. The routing table is the sign at the entrance telling each visitor which door to use based on their destination."
       },
       {
+        "heading": "CIDR notation: reading 192.168.1.0/24",
+        "text": "The /24 is a prefix length. An IPv4 address has 32 bits, written as four groups of 0-255. /24 means the first 24 bits - the first three groups - are fixed and name the network. The remaining 8 bits identify a host inside it. So 192.168.1.0/24 covers every address from 192.168.1.0 to 192.168.1.255: 256 addresses whose first three groups are all 192.168.1.\n\nA larger prefix number means a smaller, more specific network. /24 gives 256 addresses. /8 (like 10.0.0.0/8) fixes only the first group and covers over 16 million addresses. /32 fixes all 32 bits and means exactly one host.\n\nTo check if an IP matches a prefix, a router zeroes out the host bits and compares. 192.168.1.20 with 24 bits masked becomes 192.168.1.0 - a match. 10.0.0.5 masked to 24 bits becomes 10.0.0.0 - no match for 192.168.1.0/24."
+      },
+      {
         "heading": "A concrete example",
-        "text": "R1 in this level has two rows. If your destination is 192.168.1.20, that address falls inside 192.168.1.0/24 (addresses .0 through .255), so R1 sends you out eth0. If you were heading to 10.0.0.5 instead, the 10.0.0.0/8 row would match and you would leave via eth1 - a completely different physical path."
+        "text": "R1 in this level has two rows. Your destination is 192.168.1.20. Masking it against /24 gives 192.168.1.0, which matches the first row - so R1 sends you out eth0. If you were heading to 10.0.0.5 instead, masking against /8 gives 10.0.0.0, matching the second row, and you would leave via eth1 - a completely different physical path."
       }
     ],
     "mission": "You are 192.168.1.5 delivering to 192.168.1.20.\n\nAt R1: find the routing table row whose prefix covers 192.168.1.20, then move through that exit."
@@ -118,7 +122,7 @@
       "termKey": "routing-table",
       "triggerNode": "node-router-a",
       "headline": "Routing Table",
-      "body": "A list of rules that tells this router where to send packets. Find the rule that matches your destination IP and follow that exit.",
+      "body": "Each row has a prefix like 192.168.1.0/24. The /24 means the first 24 bits are fixed - any address starting with 192.168.1 matches. Find the row whose prefix covers your destination 192.168.1.20 and take that exit.",
       "highlightNodeId": "node-router-a"
     }
   ],

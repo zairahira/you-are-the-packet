@@ -48,76 +48,100 @@ function _buildTablesHtml(nodes, destIP) {
 
 export default class TheoryPanel {
   constructor() {
-    this._el = document.getElementById('theory-panel')
-    this._onContinue = null
+    this._el         = document.getElementById('theory-panel')
+    this._briefingEl = document.getElementById('briefing-overlay')
     this._clearTimer = null
+    this._errorTimer = null
   }
 
-  show(levelData, onContinue) {
-    this._onContinue = onContinue
+  /* ── Idea 3: full-screen mission briefing ─────────────────────────────── */
+  showBriefing(levelData, onReady) {
+    if (!levelData?.theory) return
     const { theory, id, player } = levelData
-    const destIP = player?.destIP
-    const srcIP  = player?.srcIP
+    const destIP    = player?.destIP
+    const srcIP     = player?.srcIP
+    const isMidGame = onReady === null
 
-    const isMidGame = onContinue === null
-
-    // Both pre-game and mid-game show: builds-on → recap → concept → tables → mission → button
-    const conceptHtml = theory.bodyParagraphs
-      ? theory.bodyParagraphs.map(p => `
-          <div class="theory-para">
-            ${p.heading ? `<div class="theory-para-heading">${p.heading}</div>` : ''}
-            <p class="theory-body-p">${p.text}</p>
-          </div>`).join('')
-      : (theory.body ? `<p class="theory-body-p">${theory.body}</p>` : '')
-
-    const tablesHtml = _buildTablesHtml(levelData.nodes, destIP)
-
-    const missionHtml = theory.mission
-      ? theory.mission
-          .split('\n\n')
-          .map(p => `<p class="theory-mission">${_highlightIPs(p, srcIP, destIP)}</p>`)
-          .join('')
-      : ''
-
-    const buildsOnHtml = (theory.buildsOn && theory.buildsOn.length)
-      ? `<div class="theory-section-label">You already know</div>
-         <div class="theory-pills">
-           ${theory.buildsOn.map(k => `<span class="theory-pill">${_termLabel(k)}</span>`).join('')}
+    const buildsOnHtml = theory.buildsOn?.length
+      ? `<div class="brief-section">
+           <div class="brief-label">You already know</div>
+           <div class="theory-pills">
+             ${theory.buildsOn.map(k => `<span class="theory-pill">${_termLabel(k)}</span>`).join('')}
+           </div>
          </div>`
       : ''
 
     const recapHtml = theory.recap
-      ? `<div class="theory-section-label">Recap</div>
-         <p class="theory-recap">${_highlightIPs(theory.recap, srcIP, destIP)}</p>`
+      ? `<div class="brief-section">
+           <div class="brief-label">Recap</div>
+           <p class="brief-recap">${_highlightIPs(theory.recap, srcIP, destIP)}</p>
+         </div>`
       : ''
 
-    const btnLabel = isMidGame ? 'Back to Game' : 'Start Level'
+    const conceptHtml = theory.bodyParagraphs?.length
+      ? `<div class="brief-section">
+           <div class="brief-label">Concept${theory.newConcept ? ': ' + _termLabel(theory.newConcept) : ''}</div>
+           <div class="theory-body">
+             ${theory.bodyParagraphs.map(p => `
+               <div class="theory-para">
+                 ${p.heading ? `<div class="theory-para-heading">${p.heading}</div>` : ''}
+                 <p class="theory-body-p">${p.text}</p>
+               </div>`).join('')}
+           </div>
+         </div>`
+      : ''
 
-    this._el.innerHTML = `
-      <div class="theory-tag">LEVEL ${id}</div>
-      <div class="theory-title">${theory.title}</div>
+    const tablesHtml = _buildTablesHtml(levelData.nodes, destIP)
+    const tablesSection = tablesHtml
+      ? `<div class="brief-section">
+           <div class="brief-label">Routing Tables</div>
+           ${tablesHtml}
+         </div>`
+      : ''
 
-      ${buildsOnHtml}
-      ${recapHtml}
+    const missionHtml = theory.mission
+      ? `<div class="brief-section">
+           <div class="brief-label">Mission Objective</div>
+           ${theory.mission.split('\n\n').map(p =>
+             `<p class="brief-mission">${_highlightIPs(p, srcIP, destIP)}</p>`
+           ).join('')}
+         </div>`
+      : ''
 
-      ${conceptHtml ? `<div class="theory-section-label">Concept</div><div class="theory-body">${conceptHtml}</div>` : ''}
+    const btnLabel = isMidGame ? 'Back to Game' : 'Start Mission'
 
-      ${tablesHtml ? `<div class="theory-section-label">Routing Tables</div>${tablesHtml}` : ''}
-
-      ${missionHtml ? `<div class="theory-section-label">Your Mission</div><div class="theory-body">${missionHtml}</div>` : ''}
-
-      <button class="btn-primary" id="btn-theory-continue">${btnLabel}</button>
+    this._briefingEl.innerHTML = `
+      <div class="briefing-inner">
+        <div class="brief-header">
+          <span class="brief-tag">Mission Brief &middot; Level ${id}</span>
+          <h1 class="brief-title">${theory.title}</h1>
+        </div>
+        ${buildsOnHtml}
+        ${recapHtml}
+        ${conceptHtml}
+        ${tablesSection}
+        ${missionHtml}
+        <button class="btn-primary brief-start-btn" id="btn-briefing-start">${btnLabel}</button>
+      </div>
     `
+    this._briefingEl.style.display = 'flex'
 
-    document.getElementById('btn-theory-continue').addEventListener('click', () => {
-      this._onContinue?.()
-      this._renderIdleState(levelData)
+    document.getElementById('btn-briefing-start').addEventListener('click', () => {
+      this._briefingEl.style.display = 'none'
+      if (!isMidGame) {
+        this._renderIdleState(levelData)
+        onReady()
+      }
     }, { once: true })
   }
 
+  /* ── Mid-game "?" button: re-show the briefing as read-only reference ─── */
   showMidGame(levelData) {
-    this.show(levelData, null)
+    this.showBriefing(levelData, null)
   }
+
+  /* ── Idle state: compact reference panel shown during gameplay ─────────── */
+  showIdleState(levelData) { this._renderIdleState(levelData) }
 
   _renderIdleState(levelData) {
     const { theory, id, player } = levelData
@@ -140,6 +164,70 @@ export default class TheoryPanel {
     `
   }
 
+  /* ── Idea 1: focus panel on current router ─────────────────────────────── */
+  focusRouter(nodeId, destIP) {
+    this._clearFocusState()
+    if (!nodeId) return
+
+    const table = this._el.querySelector(`.rt-table[data-node-id="${nodeId}"]`)
+    if (!table) return
+
+    const wrapper = table.closest('.theory-router')
+    if (wrapper) {
+      wrapper.classList.add('rt-router-focus')
+      const nameEl = wrapper.querySelector('.theory-router-name')
+      if (nameEl && !nameEl.querySelector('.rt-here-badge')) {
+        const badge = document.createElement('span')
+        badge.className = 'rt-here-badge'
+        badge.textContent = 'you are here'
+        nameEl.appendChild(badge)
+      }
+    }
+
+    if (destIP) {
+      let bestRow = null, bestLen = -1
+      table.querySelectorAll('tbody tr[data-prefix]').forEach(row => {
+        const prefix    = row.getAttribute('data-prefix')
+        const prefixLen = parseInt(prefix.split('/')[1], 10)
+        if (ipInCIDR(destIP, prefix) && prefixLen > bestLen) {
+          bestLen = prefixLen; bestRow = row
+        }
+      })
+      if (bestRow) bestRow.classList.add('rt-active-match')
+    }
+
+    wrapper?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }
+
+  clearFocus() { this._clearFocusState() }
+
+  _clearFocusState() {
+    this._el.querySelectorAll('.rt-router-focus').forEach(el => el.classList.remove('rt-router-focus'))
+    this._el.querySelectorAll('.rt-here-badge').forEach(el => el.remove())
+    this._el.querySelectorAll('.rt-active-match').forEach(el => el.classList.remove('rt-active-match'))
+  }
+
+  /* ── Idea 6: wrong-move explanation in panel ───────────────────────────── */
+  showWrongRoute(fromNodeId, destIP, matchedRoute) {
+    this._el.querySelector('.theory-error-notice')?.remove()
+
+    const matchText = matchedRoute
+      ? `The correct route is <strong>${matchedRoute.prefix} &rarr; ${matchedRoute.interface}</strong>.`
+      : 'No matching route found.'
+
+    const notice = document.createElement('div')
+    notice.className = 'theory-error-notice'
+    notice.innerHTML = `<strong>Wrong exit:</strong> ${destIP} doesn't match that route. ${matchText}`
+    this._el.prepend(notice)
+    this._el.scrollTop = 0
+
+    clearTimeout(this._errorTimer)
+    this._errorTimer = setTimeout(() => notice.remove(), 4000)
+
+    this.focusRouter(fromNodeId, destIP)
+  }
+
+  /* ── Existing highlight (for firewall errors) ───────────────────────────── */
   highlight(nodeId, prefix) {
     this.clearHighlight()
     if (!nodeId) return
@@ -161,6 +249,8 @@ export default class TheoryPanel {
 
   hide() {
     clearTimeout(this._clearTimer)
+    clearTimeout(this._errorTimer)
+    this._briefingEl.style.display = 'none'
     this._el.innerHTML = ''
   }
 }

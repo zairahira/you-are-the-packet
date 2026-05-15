@@ -55,7 +55,7 @@ export function setupCanvas(canvas) {
   return { ctx, w, h }
 }
 
-export function drawWorld(ctx, w, h, levelData, levelState, packet) {
+export function drawWorld(ctx, w, h, levelData, levelState, packet, visitedEdges) {
   ctx.fillStyle = '#0a0a23'
   ctx.fillRect(0, 0, w, h)
 
@@ -84,13 +84,13 @@ export function drawWorld(ctx, w, h, levelData, levelState, packet) {
     ctx.stroke()
   }
 
-  _drawEdges(ctx, levelData, levelState)
+  _drawEdges(ctx, levelData, levelState, visitedEdges)
   _drawNodes(ctx, levelData, levelState)
   _drawLabels(ctx, levelData, levelState)
   _drawPacket(ctx, packet)
 }
 
-function _drawEdges(ctx, levelData, levelState) {
+function _drawEdges(ctx, levelData, levelState, visitedEdges) {
   // Build map: nodeId -> (nextHopId -> interfaceName) from routing tables
   const ifaceMap = new Map()
   ;(levelData.nodes || []).forEach(node => {
@@ -107,13 +107,18 @@ function _drawEdges(ctx, levelData, levelState) {
     if (!a || !b) return
 
     const unstable = (edge.dropRate || 0) > 0
+    const visited  = visitedEdges?.has(`${edge.from}→${edge.to}`) ||
+                     visitedEdges?.has(`${edge.to}→${edge.from}`)
+
     if (unstable) {
       const alpha = (0.4 + 0.3 * Math.sin(Date.now() / 350)).toFixed(2)
       ctx.strokeStyle = `rgba(255,173,173,${alpha})`
+    } else if (visited) {
+      ctx.strokeStyle = 'rgba(172, 209, 87, 0.65)'
     } else {
       ctx.strokeStyle = '#4a4a6a'
     }
-    ctx.lineWidth = 3
+    ctx.lineWidth = visited ? 4 : 3
     ctx.beginPath()
     ctx.moveTo(a.x, a.y)
     ctx.lineTo(b.x, b.y)
