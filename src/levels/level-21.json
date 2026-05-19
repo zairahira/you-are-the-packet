@@ -4,7 +4,12 @@
   "concept": "ddos",
   "theory": {
     "title": "DDoS: When the Flood Blocks the Path",
-    "buildsOn": ["anycast", "firewall", "routing-table", "packet-loss"],
+    "buildsOn": [
+      "anycast",
+      "firewall",
+      "routing-table",
+      "packet-loss"
+    ],
     "recap": "Anycast distributes traffic to many edge nodes by advertising the same IP from multiple locations. Packet loss occurs when links or servers are overwhelmed. Rate limiters protect servers by dropping excess requests. A DDoS attack weaponizes all of these - flooding a server until it cannot serve legitimate traffic.",
     "newConcept": "ddos",
     "plainObjective": "The direct path to the server is rate-limited and overwhelmed by the DDoS flood. Find the anycast path to reach a clean edge node that is not overwhelmed.",
@@ -12,19 +17,19 @@
     "bodyParagraphs": [
       {
         "heading": "What is a DDoS?",
-        "text": "A Distributed Denial of Service attack floods a server with more traffic than it can handle. Unlike a single-source DoS, DDoS traffic comes from thousands or millions of compromised machines (a botnet). The goal is to exhaust bandwidth, CPU, or connection limits until the server can't respond to legitimate users."
+        "text": "A DDoS attack floods a server with more traffic than it can handle. Traffic comes from thousands of compromised machines (a botnet). The goal is to exhaust bandwidth, CPU, or connections until legitimate users can't get through."
       },
       {
         "heading": "Rate limiting",
-        "text": "A rate limiter drops requests above a threshold: if a source exceeds 100 requests/second, further requests are blocked. Rate limiting protects servers from being overwhelmed but cannot stop a distributed attack - when 10,000 bots each send 10 req/s, the combined flood (100,000 req/s) still overwhelms a 1,000 req/s limit."
+        "text": "A rate limiter drops requests above a threshold. Rate limiting protects against simple floods but not distributed attacks - when 10,000 bots each send 10 req/s, the combined flood overwhelms most rate limits."
       },
       {
         "heading": "Anycast as DDoS mitigation",
-        "text": "The anycast defense: advertise the target IP from hundreds of locations. Instead of all attack traffic hitting one server, it spreads globally. Each node absorbs a small fraction. Legitimate users still reach their nearest node - attack traffic diluted by geography."
+        "text": "The anycast defense: advertise the target IP from hundreds of locations. Instead of all attack traffic hitting one server, it spreads globally. Each node absorbs a fraction. Legitimate users still reach their nearest node."
       },
       {
         "heading": "Clean-pipe routing",
-        "text": "Large organizations use clean-pipe routing: traffic is scrubbed at the edge (DDoS mitigation appliances filter attack signatures) before being forwarded to the origin. The origin only sees clean traffic. This is what services like Cloudflare, AWS Shield, and Akamai do."
+        "text": "Traffic is scrubbed at the edge before reaching the origin. DDoS mitigation appliances filter attack signatures; the origin only sees clean traffic. This is what services like Cloudflare and AWS Shield provide."
       }
     ],
     "mission": "Your packet needs to reach the server (10.70.2.10) during an active DDoS attack.\n\nThe direct path runs through a rate-limited node overwhelmed by the flood (your requestCount: 5000 exceeds its 100 req/s threshold). Route through the anycast edge node instead - it handles the distributed load and has no rate limit on clean traffic."
@@ -39,56 +44,200 @@
     "portTag": 80,
     "requestCount": 5000
   },
-  "destination": { "nodeId": "node-dest", "label": "clean-server" },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "clean-server"
+  },
   "nodes": [
-    { "id": "node-spawn",    "type": "spawn",      "col": 1, "row": 3 },
     {
-      "id": "node-r1",       "type": "router",     "col": 3, "row": 3,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 3
+    },
+    {
+      "id": "node-r1",
+      "type": "router",
+      "col": 3,
+      "row": 3,
       "checkpoint": true,
       "label": "R1",
       "routingTable": [
-        { "prefix": "10.70.2.0/24", "nextHop": "node-fw",    "interface": "eth0" },
-        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead",  "interface": "eth1" }
+        {
+          "prefix": "10.70.2.0/24",
+          "nextHop": "node-fw",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead",     "type": "exit",       "col": 3, "row": 1, "label": "0.0.0.0/0" },
     {
-      "id": "node-fw",       "type": "firewall",   "col": 5, "row": 3, "label": "Edge FW",
+      "id": "node-dead",
+      "type": "exit",
+      "col": 3,
+      "row": 1,
+      "label": "0.0.0.0/0"
+    },
+    {
+      "id": "node-fw",
+      "type": "firewall",
+      "col": 5,
+      "row": 3,
+      "label": "Edge FW",
       "firewallRules": [
-        { "port": 80,  "protocol": "*", "action": "allow" },
-        { "port": "*", "protocol": "*", "action": "deny"  }
+        {
+          "port": 80,
+          "protocol": "*",
+          "action": "allow"
+        },
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
-    { "id": "node-fork",     "type": "http-node",  "col": 7, "row": 3, "label": "Server Access", "checkpoint": true },
-    { "id": "node-rl",       "type": "rate-limit", "col": 7, "row": 1, "label": "Direct Server", "threshold": 100 },
     {
-      "id": "node-anycast",  "type": "as-node",    "col": 9, "row": 3,
+      "id": "node-fork",
+      "type": "http-node",
+      "col": 7,
+      "row": 3,
+      "label": "Server Access",
+      "checkpoint": true
+    },
+    {
+      "id": "node-rl",
+      "type": "rate-limit",
+      "col": 7,
+      "row": 1,
+      "label": "Direct Server",
+      "threshold": 100
+    },
+    {
+      "id": "node-anycast",
+      "type": "as-node",
+      "col": 9,
+      "row": 3,
       "label": "Anycast Edge",
       "routingTable": [
-        { "prefix": "10.70.2.0/24", "nextHop": "node-dest",  "interface": "clean-path" },
-        { "prefix": "0.0.0.0/0",    "nextHop": "node-overload","interface": "eth1"     }
+        {
+          "prefix": "10.70.2.0/24",
+          "nextHop": "node-dest",
+          "interface": "clean-path"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-overload",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-overload",  "type": "exit",      "col": 9, "row": 1, "label": "overloaded edge" },
-    { "id": "node-dest",      "type": "destination","col": 11,"row": 3, "label": "clean-server" }
+    {
+      "id": "node-overload",
+      "type": "exit",
+      "col": 9,
+      "row": 1,
+      "label": "overloaded edge"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 11,
+      "row": 3,
+      "label": "clean-server"
+    }
   ],
   "edges": [
-    { "from": "node-spawn",   "to": "node-r1",      "directed": false, "dropRate": 0 },
-    { "from": "node-r1",      "to": "node-dead",    "directed": false, "dropRate": 0 },
-    { "from": "node-r1",      "to": "node-fw",      "directed": false, "dropRate": 0 },
-    { "from": "node-fw",      "to": "node-fork",    "directed": false, "dropRate": 0 },
-    { "from": "node-fork",    "to": "node-rl",      "directed": false, "dropRate": 0 },
-    { "from": "node-fork",    "to": "node-anycast", "directed": false, "dropRate": 0 },
-    { "from": "node-anycast", "to": "node-overload","directed": false, "dropRate": 0 },
-    { "from": "node-anycast", "to": "node-dest",    "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-dead",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-fw",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw",
+      "to": "node-fork",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fork",
+      "to": "node-rl",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fork",
+      "to": "node-anycast",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-anycast",
+      "to": "node-overload",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-anycast",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",  "text": "YOU: 10.0.5.5",       "attachToNode": "node-spawn",   "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-dest", "text": "DEST: 10.70.2.10",    "attachToNode": "node-spawn",   "offsetY": -58, "style": "ip-label"   },
-    { "id": "lbl-flood","text": "req/s: 5000 (flood)", "attachToNode": "node-spawn",   "offsetY": -76, "style": "port-label" },
-    { "id": "lbl-rl",   "text": "limit: 100 req/s",    "attachToNode": "node-rl",      "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-edge", "text": "clean-pipe path",     "attachToNode": "node-anycast", "offsetY": 55,  "style": "cidr-label" }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 10.0.5.5",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: 10.70.2.10",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-flood",
+      "text": "req/s: 5000 (flood)",
+      "attachToNode": "node-spawn",
+      "offsetY": -76,
+      "style": "port-label"
+    },
+    {
+      "id": "lbl-rl",
+      "text": "limit: 100 req/s",
+      "attachToNode": "node-rl",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-edge",
+      "text": "clean-pipe path",
+      "attachToNode": "node-anycast",
+      "offsetY": 55,
+      "style": "cidr-label"
+    }
   ],
   "termIntroductions": [
     {
@@ -115,5 +264,12 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-r1", "node-fw", "node-fork", "node-anycast", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-r1",
+    "node-fw",
+    "node-fork",
+    "node-anycast",
+    "node-dest"
+  ]
 }

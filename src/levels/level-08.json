@@ -4,7 +4,12 @@
   "concept": "nat",
   "theory": {
     "title": "NAT: One Address for Many",
-    "buildsOn": ["routing-table", "longest-prefix-match", "dhcp", "dns"],
+    "buildsOn": [
+      "routing-table",
+      "longest-prefix-match",
+      "dhcp",
+      "dns"
+    ],
     "recap": "DHCP gave you a private address (192.168.1.5) and you know how to resolve names with DNS. But private addresses are not routable on the public internet. To reach a public destination you must look up its name AND translate your source address. Routing happens before, between, and after.",
     "newConcept": "nat",
     "plainObjective": "Resolve fcc.io with DNS, then cross the NAT gateway to swap your private source IP for a public one, then route on to the public destination.",
@@ -12,19 +17,19 @@
     "bodyParagraphs": [
       {
         "heading": "Why private IPs exist",
-        "text": "IPv4 has about 4 billion addresses - not enough for every device on earth. RFC 1918 set aside three ranges (10.x.x.x, 172.16-31.x.x, 192.168.x.x) for private use. Your DHCP server in the last act gave you one of these. They're free to reuse inside any home or office - but public internet routers will not forward them."
+        "text": "IPv4 has ~4 billion addresses - not enough for every device. RFC 1918 reserved three ranges for private use:<ul><li><code>10.0.0.0/8</code></li><li><code>172.16.0.0/12</code></li><li><code>192.168.0.0/16</code></li></ul>These are free to reuse inside any home or office, but public routers will not forward them."
       },
       {
         "heading": "What NAT does",
-        "text": "A NAT gateway sits at the boundary between private and public. When your packet crosses it, the gateway replaces your private source IP with its own public IP. Return traffic comes back to the gateway, which translates it back and forwards it to you."
+        "text": "A NAT gateway sits at the boundary between private and public. When your packet crosses it, the gateway replaces your private source IP with its own public IP. Return traffic comes back to the gateway, which translates it back."
       },
       {
         "heading": "The trade-off",
-        "text": "NAT stretches the IPv4 address space dramatically - millions of devices can share one public IP. The cost is complexity: the gateway must track every active connection and the internet cannot directly initiate connections to devices behind NAT."
+        "text": "NAT lets millions of devices share one public IP. The cost: the gateway must track every active connection, and the internet cannot directly initiate connections to devices behind NAT."
       },
       {
         "heading": "Order of operations",
-        "text": "Your destination is a name (fcc.io). Resolve it at DNS first - your packet has no destIP until then. With the IP in hand, R1's table decides where to send you next. The public-bound route leads to the NAT gateway; from there a second router carries you across the public network."
+        "text": "Your destination is a name (<code>fcc.io</code>). Resolve it at DNS first. With the IP in hand, R1's table decides where to send you. The public-bound route leads to NAT; from there a second router carries you across the public network."
       }
     ],
     "mission": "You are 192.168.1.5 trying to reach fcc.io.\n\nResolve the name at the DNS resolver, then let R1 route you to the NAT gateway. After NAT rewrites your source IP, R2 will carry you the rest of the way. Watch the top bar as your IP changes."
@@ -39,55 +44,188 @@
     "portTag": null,
     "domainName": "fcc.io"
   },
-  "destination": { "nodeId": "node-dest", "label": "fcc.io" },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "fcc.io"
+  },
   "nodes": [
-    { "id": "node-spawn", "type": "spawn",        "col": 1,  "row": 4 },
-    { "id": "node-jct",   "type": "exit",         "col": 3,  "row": 4 },
     {
-      "id": "node-dns",   "type": "dns-resolver", "col": 3,  "row": 2,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 4
+    },
+    {
+      "id": "node-jct",
+      "type": "exit",
+      "col": 3,
+      "row": 4
+    },
+    {
+      "id": "node-dns",
+      "type": "dns-resolver",
+      "col": 3,
+      "row": 2,
       "checkpoint": true,
-      "dnsRecord": { "domain": "fcc.io", "resolvedIP": "8.8.8.1", "type": "A" }
+      "dnsRecord": {
+        "domain": "fcc.io",
+        "resolvedIP": "8.8.8.1",
+        "type": "A"
+      }
     },
     {
-      "id": "node-r1",    "type": "router",       "col": 6,  "row": 4,
-      "label": "R1", "checkpoint": true,
+      "id": "node-r1",
+      "type": "router",
+      "col": 6,
+      "row": 4,
+      "label": "R1",
+      "checkpoint": true,
       "routingTable": [
-        { "prefix": "8.0.0.0/8",      "nextHop": "node-nat",   "interface": "eth0" },
-        { "prefix": "192.168.0.0/16", "nextHop": "node-wrong", "interface": "eth1" }
+        {
+          "prefix": "8.0.0.0/8",
+          "nextHop": "node-nat",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "192.168.0.0/16",
+          "nextHop": "node-wrong",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-wrong", "type": "exit",         "col": 6,  "row": 6, "label": "Private LAN" },
     {
-      "id": "node-nat",   "type": "nat-gateway",  "col": 8,  "row": 4,
-      "label": "NAT", "publicIP": "203.0.113.1"
+      "id": "node-wrong",
+      "type": "exit",
+      "col": 6,
+      "row": 6,
+      "label": "Private LAN"
     },
     {
-      "id": "node-r2",    "type": "router",       "col": 10, "row": 4,
-      "label": "R2", "checkpoint": true,
+      "id": "node-nat",
+      "type": "nat-gateway",
+      "col": 8,
+      "row": 4,
+      "label": "NAT",
+      "publicIP": "203.0.113.1"
+    },
+    {
+      "id": "node-r2",
+      "type": "router",
+      "col": 10,
+      "row": 4,
+      "label": "R2",
+      "checkpoint": true,
       "routingTable": [
-        { "prefix": "8.0.0.0/8", "nextHop": "node-dest", "interface": "eth0" }
+        {
+          "prefix": "8.0.0.0/8",
+          "nextHop": "node-dest",
+          "interface": "eth0"
+        }
       ]
     },
-    { "id": "node-dest",  "type": "destination",  "col": 12, "row": 4, "label": "fcc.io" }
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 12,
+      "row": 4,
+      "label": "fcc.io"
+    }
   ],
   "edges": [
-    { "from": "node-spawn", "to": "node-jct",   "directed": false, "dropRate": 0 },
-    { "from": "node-jct",   "to": "node-dns",   "directed": false, "dropRate": 0 },
-    { "from": "node-jct",   "to": "node-r1",    "directed": false, "dropRate": 0 },
-    { "from": "node-r1",    "to": "node-wrong", "directed": false, "dropRate": 0 },
-    { "from": "node-r1",    "to": "node-nat",   "directed": false, "dropRate": 0 },
-    { "from": "node-nat",   "to": "node-r2",    "directed": false, "dropRate": 0 },
-    { "from": "node-r2",    "to": "node-dest",  "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-jct",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-jct",
+      "to": "node-dns",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-jct",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-wrong",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-nat",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-nat",
+      "to": "node-r2",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r2",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",     "text": "YOU: 192.168.1.5",  "attachToNode": "node-spawn", "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-dom",     "text": "DEST: fcc.io (?)",   "attachToNode": "node-spawn", "offsetY": -58, "style": "ip-label"   },
-    { "id": "lbl-dns",     "text": "DNS RESOLVER",       "attachToNode": "node-dns",   "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-record",  "text": "fcc.io -> 8.8.8.1", "attachToNode": "node-dns",   "offsetY": -58, "style": "routing-entry"},
-    { "id": "lbl-nat",     "text": "NAT GATEWAY",        "attachToNode": "node-nat",   "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-rewrite", "text": "-> 203.0.113.1",    "attachToNode": "node-nat",   "offsetY": -58, "style": "port-label" },
-    { "id": "lbl-pub",     "text": "8.8.8.1",            "attachToNode": "node-dest",  "offsetY": -40, "style": "ip-label"   }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 192.168.1.5",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dom",
+      "text": "DEST: fcc.io (?)",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dns",
+      "text": "DNS RESOLVER",
+      "attachToNode": "node-dns",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-record",
+      "text": "fcc.io -> 8.8.8.1",
+      "attachToNode": "node-dns",
+      "offsetY": -58,
+      "style": "routing-entry"
+    },
+    {
+      "id": "lbl-nat",
+      "text": "NAT GATEWAY",
+      "attachToNode": "node-nat",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-rewrite",
+      "text": "-> 203.0.113.1",
+      "attachToNode": "node-nat",
+      "offsetY": -58,
+      "style": "port-label"
+    },
+    {
+      "id": "lbl-pub",
+      "text": "8.8.8.1",
+      "attachToNode": "node-dest",
+      "offsetY": -40,
+      "style": "ip-label"
+    }
   ],
   "termIntroductions": [
     {
@@ -114,5 +252,14 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-jct", "node-dns", "node-jct", "node-r1", "node-nat", "node-r2", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-jct",
+    "node-dns",
+    "node-jct",
+    "node-r1",
+    "node-nat",
+    "node-r2",
+    "node-dest"
+  ]
 }

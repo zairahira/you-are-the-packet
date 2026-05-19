@@ -4,7 +4,11 @@
   "concept": "dnssec",
   "theory": {
     "title": "DNSSEC: Trusting the Map",
-    "buildsOn": ["dns", "tls", "routing-table"],
+    "buildsOn": [
+      "dns",
+      "tls",
+      "routing-table"
+    ],
     "recap": "DNS translates domain names to IP addresses. TLS certificates verify a server's identity. But what verifies the DNS answer itself? Without protection, an attacker can inject a fake DNS record and redirect you to a malicious server before TLS even begins.",
     "newConcept": "dnssec",
     "plainObjective": "Two DNS resolvers are available. The unsigned resolver returns a poisoned IP that routes to a fake server. The DNSSEC-validated resolver returns the real IP. Choose the DNSSEC resolver, then route to the real destination.",
@@ -12,19 +16,19 @@
     "bodyParagraphs": [
       {
         "heading": "DNS cache poisoning",
-        "text": "An attacker who can intercept or predict DNS queries can inject a fake response: 'secure.example.com = 203.0.113.99 (attacker's server)'. Your browser trusts this answer and connects to the wrong server. If the attacker also has a certificate for that domain, TLS appears to succeed - but you're talking to the wrong server."
+        "text": "An attacker who can inject a fake DNS response sends: \"<code>secure.example.com</code> = attacker's server\". Your browser trusts this and connects to the wrong server. If the attacker also has a certificate, TLS appears to succeed."
       },
       {
         "heading": "How DNSSEC works",
-        "text": "DNSSEC uses public-key cryptography. Each DNS zone has a Zone Signing Key (ZSK). Records are signed with the ZSK. The ZSK itself is signed by the Key Signing Key (KSK). The KSK's hash is published in the parent zone. The chain ends at the DNS root - which is itself signed by ICANN's key."
+        "text": "DNSSEC uses public-key cryptography. Each DNS zone has a Zone Signing Key (<code>ZSK</code>) that signs DNS records. The <code>ZSK</code> itself is signed by the Key Signing Key (<code>KSK</code>). The <code>KSK</code> hash is published in the parent zone. The chain ends at the DNS root."
       },
       {
         "heading": "Chain of trust",
-        "text": "Validation starts at the root: does the root's signature on .com check out? Does .com's signature on example.com check out? Does example.com's signature on this A record check out? If any link in the chain fails, the resolver returns SERVFAIL instead of the poisoned record."
+        "text": "Validation starts at the root:<ul><li>Does the root's signature on <code>.com</code> check out?</li><li>Does <code>.com</code>'s signature on <code>example.com</code> check out?</li><li>Does <code>example.com</code>'s signature on this record check out?</li></ul>If any link fails, the resolver returns <code>SERVFAIL</code> instead of the poisoned record."
       },
       {
         "heading": "DNSSEC limitations",
-        "text": "DNSSEC proves the answer came from the legitimate zone operator - but not that the zone operator configured the correct IP. It also doesn't encrypt DNS queries (that's DNS-over-HTTPS or DNS-over-TLS). And DNSSEC deployment is still incomplete: not all zones are signed, and not all resolvers validate."
+        "text": "DNSSEC proves the answer came from the legitimate zone operator - but not that the IP is correct. Other limitations:<ul><li>Doesn't encrypt queries (that's DNS-over-HTTPS or DNS-over-TLS)</li><li>Not all zones are signed</li><li>Not all resolvers validate</li></ul>"
       }
     ],
     "mission": "You need to reach secure.example.com. Two DNS resolvers are available.\n\nThe unsigned resolver has a poisoned cache: it returns a fake IP (203.0.113.99) that leads to an attacker's server. The DNSSEC-validated resolver verifies the signature chain and returns the real IP (10.70.3.10). Choose DNSSEC, then route to the real server."
@@ -39,41 +43,96 @@
     "portTag": 80,
     "domainName": "secure.example.com"
   },
-  "destination": { "nodeId": "node-dest", "label": "real secure-server" },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "real secure-server"
+  },
   "nodes": [
-    { "id": "node-spawn",     "type": "spawn",        "col": 1, "row": 3 },
     {
-      "id": "node-fw",        "type": "firewall",     "col": 3, "row": 3,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 3
+    },
+    {
+      "id": "node-fw",
+      "type": "firewall",
+      "col": 3,
+      "row": 3,
       "checkpoint": true,
       "label": "Border FW",
       "firewallRules": [
-        { "port": 80,  "protocol": "*", "action": "allow" },
-        { "port": "*", "protocol": "*", "action": "deny"  }
+        {
+          "port": 80,
+          "protocol": "*",
+          "action": "allow"
+        },
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
-    { "id": "node-dns-fork",  "type": "http-node",    "col": 5, "row": 3, "label": "DNS Resolvers", "checkpoint": true },
     {
-      "id": "node-dns-bad",   "type": "dns-resolver", "col": 5, "row": 1,
+      "id": "node-dns-fork",
+      "type": "http-node",
+      "col": 5,
+      "row": 3,
+      "label": "DNS Resolvers",
+      "checkpoint": true
+    },
+    {
+      "id": "node-dns-bad",
+      "type": "dns-resolver",
+      "col": 5,
+      "row": 1,
       "label": "Unsigned DNS",
       "dnssec": false,
       "dnsRecord": {
         "domain": "secure.example.com",
         "resolvedIP": "10.70.3.10",
-        "poisonedIP":  "203.0.113.99"
+        "poisonedIP": "203.0.113.99"
       }
     },
     {
-      "id": "node-r-bad",     "type": "router",       "col": 7, "row": 1,
+      "id": "node-r-bad",
+      "type": "router",
+      "col": 7,
+      "row": 1,
       "label": "R-evil",
       "routingTable": [
-        { "prefix": "203.0.113.0/24", "nextHop": "node-evil",   "interface": "eth0" },
-        { "prefix": "0.0.0.0/0",      "nextHop": "node-no-rt",  "interface": "eth1" }
+        {
+          "prefix": "203.0.113.0/24",
+          "nextHop": "node-evil",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-no-rt",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-evil",      "type": "exit",         "col": 9, "row": 1, "label": "attacker's server" },
-    { "id": "node-no-rt",     "type": "exit",         "col": 7, "row": 5, "label": "no route" },
     {
-      "id": "node-dns-good",  "type": "dns-resolver", "col": 7, "row": 3,
+      "id": "node-evil",
+      "type": "exit",
+      "col": 9,
+      "row": 1,
+      "label": "attacker's server"
+    },
+    {
+      "id": "node-no-rt",
+      "type": "exit",
+      "col": 7,
+      "row": 5,
+      "label": "no route"
+    },
+    {
+      "id": "node-dns-good",
+      "type": "dns-resolver",
+      "col": 7,
+      "row": 3,
       "label": "DNSSEC Resolver",
       "dnssec": true,
       "dnsRecord": {
@@ -82,37 +141,146 @@
       }
     },
     {
-      "id": "node-r2",        "type": "router",       "col": 9, "row": 3,
+      "id": "node-r2",
+      "type": "router",
+      "col": 9,
+      "row": 3,
       "checkpoint": true,
       "label": "R2",
       "routingTable": [
-        { "prefix": "10.70.3.0/24", "nextHop": "node-dest",  "interface": "eth0" },
-        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead2", "interface": "eth1" }
+        {
+          "prefix": "10.70.3.0/24",
+          "nextHop": "node-dest",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead2",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead2",     "type": "exit",         "col": 9, "row": 5, "label": "no route" },
-    { "id": "node-dest",      "type": "destination",  "col": 11,"row": 3, "label": "real secure-server" }
+    {
+      "id": "node-dead2",
+      "type": "exit",
+      "col": 9,
+      "row": 5,
+      "label": "no route"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 11,
+      "row": 3,
+      "label": "real secure-server"
+    }
   ],
   "edges": [
-    { "from": "node-spawn",    "to": "node-fw",       "directed": false, "dropRate": 0 },
-    { "from": "node-fw",       "to": "node-dns-fork", "directed": false, "dropRate": 0 },
-    { "from": "node-dns-fork", "to": "node-dns-bad",  "directed": false, "dropRate": 0 },
-    { "from": "node-dns-bad",  "to": "node-r-bad",    "directed": false, "dropRate": 0 },
-    { "from": "node-r-bad",    "to": "node-evil",     "directed": false, "dropRate": 0 },
-    { "from": "node-r-bad",    "to": "node-no-rt",    "directed": false, "dropRate": 0 },
-    { "from": "node-dns-fork", "to": "node-dns-good", "directed": false, "dropRate": 0 },
-    { "from": "node-dns-good", "to": "node-r2",       "directed": false, "dropRate": 0 },
-    { "from": "node-r2",       "to": "node-dead2",    "directed": false, "dropRate": 0 },
-    { "from": "node-r2",       "to": "node-dest",     "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-fw",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw",
+      "to": "node-dns-fork",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-dns-fork",
+      "to": "node-dns-bad",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-dns-bad",
+      "to": "node-r-bad",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r-bad",
+      "to": "node-evil",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r-bad",
+      "to": "node-no-rt",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-dns-fork",
+      "to": "node-dns-good",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-dns-good",
+      "to": "node-r2",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r2",
+      "to": "node-dead2",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r2",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",    "text": "YOU: 10.0.5.5",          "attachToNode": "node-spawn",    "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-dest",   "text": "DEST: secure.example.com","attachToNode": "node-spawn",    "offsetY": -58, "style": "ip-label"   },
-    { "id": "lbl-port",   "text": "PORT: 80",                "attachToNode": "node-spawn",    "offsetY": -76, "style": "port-label" },
-    { "id": "lbl-bad",    "text": "POISONED cache",          "attachToNode": "node-dns-bad",  "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-good",   "text": "DNSSEC validated",        "attachToNode": "node-dns-good", "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-evil",   "text": "→ 203.0.113.99 (fake)",  "attachToNode": "node-evil",     "offsetY": -40, "style": "rule-text"  }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 10.0.5.5",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: secure.example.com",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-port",
+      "text": "PORT: 80",
+      "attachToNode": "node-spawn",
+      "offsetY": -76,
+      "style": "port-label"
+    },
+    {
+      "id": "lbl-bad",
+      "text": "POISONED cache",
+      "attachToNode": "node-dns-bad",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-good",
+      "text": "DNSSEC validated",
+      "attachToNode": "node-dns-good",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-evil",
+      "text": "→ 203.0.113.99 (fake)",
+      "attachToNode": "node-evil",
+      "offsetY": -40,
+      "style": "rule-text"
+    }
   ],
   "termIntroductions": [
     {
@@ -153,5 +321,12 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-fw", "node-dns-fork", "node-dns-good", "node-r2", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-fw",
+    "node-dns-fork",
+    "node-dns-good",
+    "node-r2",
+    "node-dest"
+  ]
 }

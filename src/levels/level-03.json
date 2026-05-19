@@ -4,7 +4,10 @@
   "concept": "subnet-prefix-match",
   "theory": {
     "title": "The Most Specific Route Wins",
-    "buildsOn": ["routing-table", "multi-hop"],
+    "buildsOn": [
+      "routing-table",
+      "multi-hop"
+    ],
     "recap": "You've read routing tables one row at a time, picking the row whose prefix covers your destination. Here, multiple rows match - so routers add a tie-breaker rule: pick the most specific one.",
     "newConcept": "longest-prefix-match",
     "plainObjective": "Three routes all match your destination. Pick the most specific one - the route with the highest prefix number.",
@@ -12,15 +15,15 @@
     "bodyParagraphs": [
       {
         "heading": "When multiple rows match - which wins?",
-        "text": "When a destination IP matches more than one routing table row, the router uses the longest prefix match rule: it always picks the most specific route. A longer prefix length means fewer addresses are covered, so it's a more targeted match."
+        "text": "When a destination IP matches more than one routing table row, the router picks the most specific route - the one with the longest prefix length."
       },
       {
         "heading": "Prefix lengths and specificity",
-        "text": "Prefix length measures specificity: /24 covers 256 addresses, /16 covers 65,536, /8 covers 16 million, and /0 covers everything. A longer prefix means fewer addresses - a tighter, more targeted rule."
+        "text": "Longer prefix = fewer addresses = more specific rule:<ul><li><code>/0</code> - matches everything (~4 billion addresses)</li><li><code>/8</code> - ~16 million addresses</li><li><code>/16</code> - ~65,000 addresses</li><li><code>/24</code> - 256 addresses</li><li><code>/32</code> - exactly one host</li></ul>"
       },
       {
         "heading": "The default route",
-        "text": "0.0.0.0/0 is the catch-all default route. Routers only use it when no more specific rule matches. Real networks use this as a last-resort path to the internet."
+        "text": "<code>0.0.0.0/0</code> is the catch-all default route. Routers only use it when no more specific rule matches. Real networks use this as a last-resort path to the internet."
       }
     ],
     "mission": "You are 10.1.1.5 delivering to 10.1.1.20.\n\nAll three rows at R1 match your destination. Pick the row with the highest prefix number - that is the most specific route."
@@ -55,9 +58,21 @@
       "label": "R1",
       "checkpoint": true,
       "routingTable": [
-        { "prefix": "10.1.1.0/24", "nextHop": "node-exit-24",      "interface": "eth0" },
-        { "prefix": "10.1.0.0/16", "nextHop": "node-exit-16",      "interface": "eth1" },
-        { "prefix": "0.0.0.0/0",   "nextHop": "node-exit-default", "interface": "eth2" }
+        {
+          "prefix": "10.1.1.0/24",
+          "nextHop": "node-exit-24",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "10.1.0.0/16",
+          "nextHop": "node-exit-16",
+          "interface": "eth1"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-exit-default",
+          "interface": "eth2"
+        }
       ]
     },
     {
@@ -90,11 +105,36 @@
     }
   ],
   "edges": [
-    { "from": "node-spawn",        "to": "node-r1",           "directed": false, "dropRate": 0 },
-    { "from": "node-r1",           "to": "node-exit-24",      "directed": false, "dropRate": 0 },
-    { "from": "node-r1",           "to": "node-exit-16",      "directed": false, "dropRate": 0 },
-    { "from": "node-r1",           "to": "node-exit-default", "directed": false, "dropRate": 0 },
-    { "from": "node-exit-24",      "to": "node-dest",         "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-exit-24",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-exit-16",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-exit-default",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-exit-24",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
@@ -133,5 +173,10 @@
   ],
   "checkpointBehavior": "last-router",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-r1", "node-exit-24", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-r1",
+    "node-exit-24",
+    "node-dest"
+  ]
 }

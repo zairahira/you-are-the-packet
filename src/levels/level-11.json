@@ -4,7 +4,11 @@
   "concept": "load-balancing",
   "theory": {
     "title": "Load Balancing: Sharing the Work",
-    "buildsOn": ["routing-table", "firewall", "packet-loss"],
+    "buildsOn": [
+      "routing-table",
+      "firewall",
+      "packet-loss"
+    ],
     "recap": "You've routed by IP, passed firewalls, and avoided lossy links. A load balancer combines all three ideas at the server side: traffic still has to be routed to it, pass its port filter, and then be distributed across multiple healthy backends - skipping any that have failed.",
     "newConcept": "load-balancing",
     "plainObjective": "Route to the front-end firewall, pass on port 80, then pick any of the healthy backends. The load balancer would normally pick for you - here, you experience the choice firsthand.",
@@ -12,19 +16,19 @@
     "bodyParagraphs": [
       {
         "heading": "Why not just one server?",
-        "text": "A single server is a single point of failure. If it crashes, every user is affected. It also has fixed capacity - once overloaded, requests slow down or fail. Adding more servers and distributing traffic across them solves both problems at once."
+        "text": "A single server is a single point of failure. If it crashes, every user is affected. Adding more servers and distributing traffic across them solves both availability and capacity."
       },
       {
         "heading": "What a load balancer does",
-        "text": "A load balancer sits in front of a pool of backend servers. Every incoming request goes to the load balancer, which forwards it to one backend. Clients connect to the load balancer's address, not to any server directly. The entire pool appears as a single address."
+        "text": "A load balancer sits in front of a pool of backend servers. Every incoming request goes to the load balancer, which forwards it to one backend. Clients connect to the load balancer's address - the entire pool appears as a single address."
       },
       {
         "heading": "Distribution algorithms",
-        "text": "Round-robin sends each new request to the next backend in turn. Least-connections picks the backend currently handling the fewest active sessions. Weighted distribution sends more traffic to higher-capacity backends. The point is that no single backend handles everything - the load is shared."
+        "text": "Common distribution strategies:<ul><li><strong>Round-robin</strong> - each new request goes to the next backend in turn</li><li><strong>Least-connections</strong> - picks the backend with fewest active sessions</li><li><strong>Weighted</strong> - sends more traffic to higher-capacity backends</li></ul>"
       },
       {
         "heading": "Health checks",
-        "text": "Load balancers continuously test each backend - usually a small HTTP request every few seconds. A backend that fails the check is removed from the pool. The two healthy backends ahead would each take a share of traffic; the failed one is silently skipped."
+        "text": "Load balancers test each backend every few seconds. A backend that fails the check is removed from the pool. Remaining healthy backends absorb the traffic."
       }
     ],
     "mission": "You carry port 80, destined for 10.30.1.1.\n\nRoute through R1, pass the firewall (port 80 only), then arrive at the load balancer. Two of the three backends are healthy - either one reaches the server. The third has crashed at the application layer and rejects all connections."
@@ -39,63 +43,254 @@
     "portTag": 80,
     "domainName": null
   },
-  "destination": { "nodeId": "node-dest", "label": "APP SERVER" },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "APP SERVER"
+  },
   "nodes": [
-    { "id": "node-spawn", "type": "spawn",       "col": 1,  "row": 4 },
     {
-      "id": "node-r1",    "type": "router",      "col": 3,  "row": 4,
-      "label": "R1", "checkpoint": true,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 4
+    },
+    {
+      "id": "node-r1",
+      "type": "router",
+      "col": 3,
+      "row": 4,
+      "label": "R1",
+      "checkpoint": true,
       "routingTable": [
-        { "prefix": "10.30.0.0/16", "nextHop": "node-fw",     "interface": "eth0" },
-        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead-d", "interface": "eth1" }
+        {
+          "prefix": "10.30.0.0/16",
+          "nextHop": "node-fw",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead-d",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead-d", "type": "exit",       "col": 3,  "row": 6, "label": "0.0.0.0/0" },
     {
-      "id": "node-fw",     "type": "firewall",   "col": 5,  "row": 4, "label": "FW :80",
+      "id": "node-dead-d",
+      "type": "exit",
+      "col": 3,
+      "row": 6,
+      "label": "0.0.0.0/0"
+    },
+    {
+      "id": "node-fw",
+      "type": "firewall",
+      "col": 5,
+      "row": 4,
+      "label": "FW :80",
       "firewallRules": [
-        { "port": 80,  "protocol": "*", "action": "allow" },
-        { "port": "*", "protocol": "*", "action": "deny" }
+        {
+          "port": 80,
+          "protocol": "*",
+          "action": "allow"
+        },
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
-    { "id": "node-lb",     "type": "exit",       "col": 7,  "row": 4, "checkpoint": true, "label": "LOAD BALANCER" },
-    { "id": "node-ba",     "type": "exit",       "col": 7,  "row": 2, "label": "BACKEND-A" },
-    { "id": "node-ba-mid", "type": "exit",       "col": 11, "row": 2 },
-    { "id": "node-bb",     "type": "exit",       "col": 9,  "row": 4, "label": "BACKEND-B" },
     {
-      "id": "node-fw-bc",  "type": "firewall",   "col": 7,  "row": 6,
+      "id": "node-lb",
+      "type": "exit",
+      "col": 7,
+      "row": 4,
+      "checkpoint": true,
+      "label": "LOAD BALANCER"
+    },
+    {
+      "id": "node-ba",
+      "type": "exit",
+      "col": 7,
+      "row": 2,
+      "label": "BACKEND-A"
+    },
+    {
+      "id": "node-ba-mid",
+      "type": "exit",
+      "col": 11,
+      "row": 2
+    },
+    {
+      "id": "node-bb",
+      "type": "exit",
+      "col": 9,
+      "row": 4,
+      "label": "BACKEND-B"
+    },
+    {
+      "id": "node-fw-bc",
+      "type": "firewall",
+      "col": 7,
+      "row": 6,
       "label": "BACKEND-C",
       "firewallRules": [
-        { "port": "*", "protocol": "*", "action": "deny" }
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
-    { "id": "node-dest",   "type": "destination","col": 11, "row": 4, "label": "APP SERVER" }
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 11,
+      "row": 4,
+      "label": "APP SERVER"
+    }
   ],
   "edges": [
-    { "from": "node-spawn", "to": "node-r1",     "directed": false, "dropRate": 0 },
-    { "from": "node-r1",    "to": "node-fw",     "directed": false, "dropRate": 0 },
-    { "from": "node-r1",    "to": "node-dead-d", "directed": false, "dropRate": 0 },
-    { "from": "node-fw",    "to": "node-lb",     "directed": false, "dropRate": 0 },
-    { "from": "node-lb",    "to": "node-ba",     "directed": false, "dropRate": 0 },
-    { "from": "node-lb",    "to": "node-bb",     "directed": false, "dropRate": 0 },
-    { "from": "node-lb",    "to": "node-fw-bc",  "directed": false, "dropRate": 0 },
-    { "from": "node-ba",    "to": "node-ba-mid", "directed": false, "dropRate": 0 },
-    { "from": "node-ba-mid","to": "node-dest",   "directed": false, "dropRate": 0 },
-    { "from": "node-bb",    "to": "node-dest",   "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-fw",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-dead-d",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw",
+      "to": "node-lb",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-lb",
+      "to": "node-ba",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-lb",
+      "to": "node-bb",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-lb",
+      "to": "node-fw-bc",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-ba",
+      "to": "node-ba-mid",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-ba-mid",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-bb",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",  "text": "YOU: 10.0.4.5",   "attachToNode": "node-spawn", "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-port", "text": "PORT: 80",         "attachToNode": "node-spawn", "offsetY": -58, "style": "port-label" },
-    { "id": "lbl-dest", "text": "DEST: 10.30.1.1",  "attachToNode": "node-spawn", "offsetY": -76, "style": "ip-label"   },
-    { "id": "lbl-fw",   "text": "ALLOWS: 80",       "attachToNode": "node-fw",    "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-lb",   "text": "LOAD BALANCER",    "attachToNode": "node-lb",    "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-ba",   "text": "BACKEND-A",        "attachToNode": "node-ba",    "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-hea",  "text": "HEALTHY",          "attachToNode": "node-ba",    "offsetY": -58, "style": "cidr-label" },
-    { "id": "lbl-bb",   "text": "BACKEND-B",        "attachToNode": "node-bb",    "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-heb",  "text": "HEALTHY",          "attachToNode": "node-bb",    "offsetY": -58, "style": "cidr-label" },
-    { "id": "lbl-bc",   "text": "BACKEND-C",        "attachToNode": "node-fw-bc", "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-hec",  "text": "APP FAILURE",      "attachToNode": "node-fw-bc", "offsetY": -58, "style": "rule-text"  }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 10.0.4.5",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-port",
+      "text": "PORT: 80",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "port-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: 10.30.1.1",
+      "attachToNode": "node-spawn",
+      "offsetY": -76,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-fw",
+      "text": "ALLOWS: 80",
+      "attachToNode": "node-fw",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-lb",
+      "text": "LOAD BALANCER",
+      "attachToNode": "node-lb",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-ba",
+      "text": "BACKEND-A",
+      "attachToNode": "node-ba",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-hea",
+      "text": "HEALTHY",
+      "attachToNode": "node-ba",
+      "offsetY": -58,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-bb",
+      "text": "BACKEND-B",
+      "attachToNode": "node-bb",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-heb",
+      "text": "HEALTHY",
+      "attachToNode": "node-bb",
+      "offsetY": -58,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-bc",
+      "text": "BACKEND-C",
+      "attachToNode": "node-fw-bc",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-hec",
+      "text": "APP FAILURE",
+      "attachToNode": "node-fw-bc",
+      "offsetY": -58,
+      "style": "rule-text"
+    }
   ],
   "termIntroductions": [
     {
@@ -122,5 +317,12 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-r1", "node-fw", "node-lb", "node-bb", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-r1",
+    "node-fw",
+    "node-lb",
+    "node-bb",
+    "node-dest"
+  ]
 }

@@ -62,15 +62,6 @@ export default class TheoryPanel {
     const srcIP     = player?.srcIP
     const isMidGame = onReady === null
 
-    const buildsOnHtml = theory.buildsOn?.length
-      ? `<div class="brief-section">
-           <div class="brief-label">You already know</div>
-           <div class="theory-pills">
-             ${theory.buildsOn.map(k => `<span class="theory-pill">${_termLabel(k)}</span>`).join('')}
-           </div>
-         </div>`
-      : ''
-
     const recapHtml = theory.recap
       ? `<div class="brief-section">
            <div class="brief-label">Recap</div>
@@ -85,7 +76,7 @@ export default class TheoryPanel {
              ${theory.bodyParagraphs.map(p => `
                <div class="theory-para">
                  ${p.heading ? `<div class="theory-para-heading">${p.heading}</div>` : ''}
-                 <p class="theory-body-p">${p.text}</p>
+                 <div class="theory-body-p">${p.text}</div>
                </div>`).join('')}
            </div>
          </div>`
@@ -116,7 +107,6 @@ export default class TheoryPanel {
           <span class="brief-tag">Mission Brief &middot; Level ${id}</span>
           <h1 class="brief-title">${theory.title}</h1>
         </div>
-        ${buildsOnHtml}
         ${recapHtml}
         ${conceptHtml}
         ${tablesSection}

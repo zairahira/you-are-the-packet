@@ -12,19 +12,19 @@
     "bodyParagraphs": [
       {
         "heading": "Why does a routing table exist?",
-        "text": "A router connects multiple networks. Without a routing table it has no idea which direction to send a packet - it would have to flood every port and let every connected device sort it out, which would overwhelm the network instantly. The routing table solves this: it is a lookup list that maps destination address ranges to specific exit ports, so the router can make a fast, precise forwarding decision for every packet."
+        "text": "A router connects multiple networks. Without a routing table it would flood every port, overwhelming the network instantly. The routing table maps destination address ranges to exit ports so the router can make a precise forwarding decision."
       },
       {
         "heading": "Network interfaces - eth0, eth1...",
-        "text": "An interface is a physical (or virtual) port on the router - the socket where a cable plugs in. eth0 is the first Ethernet port, eth1 the second, and so on. Think of a router as a building with multiple doors: eth0 leads to one corridor, eth1 to another. The routing table is the sign at the entrance telling each visitor which door to use based on their destination."
+        "text": "An interface is a port on the router. <code>eth0</code> is the first Ethernet port, <code>eth1</code> the second. The routing table maps each destination range to the interface that leads toward it."
       },
       {
         "heading": "CIDR notation: reading 192.168.1.0/24",
-        "text": "The /24 is a prefix length. An IPv4 address has 32 bits, written as four groups of 0-255. /24 means the first 24 bits - the first three groups - are fixed and name the network. The remaining 8 bits identify a host inside it. So 192.168.1.0/24 covers every address from 192.168.1.0 to 192.168.1.255: 256 addresses whose first three groups are all 192.168.1.\n\nA larger prefix number means a smaller, more specific network. /24 gives 256 addresses. /8 (like 10.0.0.0/8) fixes only the first group and covers over 16 million addresses. /32 fixes all 32 bits and means exactly one host.\n\nTo check if an IP matches a prefix, a router zeroes out the host bits and compares. 192.168.1.20 with 24 bits masked becomes 192.168.1.0 - a match. 10.0.0.5 masked to 24 bits becomes 10.0.0.0 - no match for 192.168.1.0/24."
+        "text": "The <code>/24</code> in <code>192.168.1.0/24</code> is a prefix length. The first 24 bits are fixed and name the network; the remaining 8 bits identify a specific host. Common prefix sizes:<ul><li><code>/8</code> - first octet fixed, ~16 million addresses</li><li><code>/16</code> - first two octets fixed, ~65,000 addresses</li><li><code>/24</code> - first three octets fixed, 256 addresses</li><li><code>/32</code> - all bits fixed, exactly one host</li></ul>"
       },
       {
         "heading": "A concrete example",
-        "text": "R1 in this level has two rows. Your destination is 192.168.1.20. Masking it against /24 gives 192.168.1.0, which matches the first row - so R1 sends you out eth0. If you were heading to 10.0.0.5 instead, masking against /8 gives 10.0.0.0, matching the second row, and you would leave via eth1 - a completely different physical path."
+        "text": "R1 has two rows. Your destination is <code>192.168.1.20</code>. Its first three octets match <code>192.168.1.0/24</code>, so R1 sends you out <code>eth0</code>. If your destination were <code>10.0.0.5</code>, it would match <code>10.0.0.0/8</code> and exit via <code>eth1</code>."
       }
     ],
     "mission": "You are 192.168.1.5 delivering to 192.168.1.20.\n\nAt R1: find the routing table row whose prefix covers 192.168.1.20, then move through that exit."
@@ -59,8 +59,16 @@
       "label": "R1",
       "checkpoint": true,
       "routingTable": [
-        { "prefix": "192.168.1.0/24", "nextHop": "node-exit-a", "interface": "eth0" },
-        { "prefix": "10.0.0.0/8",     "nextHop": "node-exit-b", "interface": "eth1" }
+        {
+          "prefix": "192.168.1.0/24",
+          "nextHop": "node-exit-a",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "10.0.0.0/8",
+          "nextHop": "node-exit-b",
+          "interface": "eth1"
+        }
       ]
     },
     {
@@ -86,10 +94,30 @@
     }
   ],
   "edges": [
-    { "from": "node-spawn",    "to": "node-router-a", "directed": false, "dropRate": 0 },
-    { "from": "node-router-a", "to": "node-exit-a",   "directed": false, "dropRate": 0 },
-    { "from": "node-router-a", "to": "node-exit-b",   "directed": false, "dropRate": 0 },
-    { "from": "node-exit-a",   "to": "node-dest",     "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-router-a",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-router-a",
+      "to": "node-exit-a",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-router-a",
+      "to": "node-exit-b",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-exit-a",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
@@ -128,5 +156,10 @@
   ],
   "checkpointBehavior": "last-router",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-router-a", "node-exit-a", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-router-a",
+    "node-exit-a",
+    "node-dest"
+  ]
 }

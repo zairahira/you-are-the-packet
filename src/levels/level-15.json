@@ -4,7 +4,11 @@
   "concept": "cdn-caching",
   "theory": {
     "title": "CDN & Caching: Content Closer to You",
-    "buildsOn": ["dns", "routing-table", "load-balancer"],
+    "buildsOn": [
+      "dns",
+      "routing-table",
+      "load-balancer"
+    ],
     "recap": "DNS translates a domain name into an IP address. Load balancers distribute traffic across servers. A CDN combines both ideas: DNS resolves your domain to the nearest CDN edge, and the edge serves cached content instead of forwarding to the origin.",
     "newConcept": "cdn-caching",
     "plainObjective": "DNS resolves the domain to the CDN's IP. At the CDN router, read the routing table: the most-specific prefix leads to the cached edge copy. Route there.",
@@ -12,19 +16,19 @@
     "bodyParagraphs": [
       {
         "heading": "What a CDN does",
-        "text": "A Content Delivery Network is a global network of servers (called edge nodes or PoPs) that store copies of content close to end users. When you load a website's image, the CDN edge nearest to you serves it - not a server in another country."
+        "text": "A Content Delivery Network stores copies of content on servers (edge nodes) close to end users. When you load an image, the nearest CDN edge serves it - not a server across the world."
       },
       {
         "heading": "Cache-Control",
-        "text": "The origin server sets Cache-Control headers to tell caches how long to keep content. max-age=3600 means 'this response is fresh for one hour - serve it from cache'. no-cache means 'always revalidate with origin before serving'. no-store means 'never cache this'."
+        "text": "The origin server sets <code>Cache-Control</code> headers to tell caches how long to keep content:<ul><li><code>max-age=3600</code> - fresh for one hour, serve from cache</li><li><code>no-cache</code> - always revalidate with origin before serving</li><li><code>no-store</code> - never cache this response</li></ul>"
       },
       {
         "heading": "Cache HIT vs MISS",
-        "text": "A cache HIT means the edge has a fresh copy - response is instant. A cache MISS means the edge doesn't have it (or it expired) and must fetch from origin. The first user always triggers a MISS; everyone after them gets a HIT until the content expires."
+        "text": "A cache <strong>HIT</strong> means the edge has a fresh copy - response is instant. A cache <strong>MISS</strong> means the edge must fetch from origin. The first user always triggers a MISS; everyone after gets a HIT until the content expires."
       },
       {
         "heading": "Routing: most-specific prefix wins",
-        "text": "The CDN router uses longest-prefix matching, just like IP routing. The edge cache has a more specific route (/24) than the origin fallback (/16). Your destIP falls in the /24 range, so the CDN routes you to the edge - the cache hit path."
+        "text": "The CDN router uses longest-prefix matching. The edge cache has a more specific route (<code>/24</code>) than the origin fallback (<code>/16</code>). Your destination falls in the <code>/24</code> range, so the CDN routes you to the edge."
       }
     ],
     "mission": "Your packet requests api.example.com (port 80). DNS resolves it to 10.60.1.5 - a CDN edge address.\n\nAt the CDN router, the routing table has two entries. Read them carefully. The longer prefix leads to the edge cache (cache HIT). The shorter prefix is the origin fallback. Route to the edge."
@@ -39,60 +43,197 @@
     "portTag": 80,
     "domainName": "api.example.com"
   },
-  "destination": { "nodeId": "node-edge", "label": "CDN edge (CACHE HIT)" },
+  "destination": {
+    "nodeId": "node-edge",
+    "label": "CDN edge (CACHE HIT)"
+  },
   "nodes": [
-    { "id": "node-spawn", "type": "spawn",        "col": 1, "row": 3 },
     {
-      "id": "node-r1",    "type": "router",       "col": 3, "row": 3,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 3
+    },
+    {
+      "id": "node-r1",
+      "type": "router",
+      "col": 3,
+      "row": 3,
       "checkpoint": true,
       "label": "R1",
       "routingTable": [
-        { "prefix": "10.60.0.0/16", "nextHop": "node-fw", "interface": "eth0" },
-        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead","interface": "eth1" }
+        {
+          "prefix": "10.60.0.0/16",
+          "nextHop": "node-fw",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead",  "type": "exit",         "col": 3, "row": 1, "label": "0.0.0.0/0" },
     {
-      "id": "node-fw",    "type": "firewall",     "col": 5, "row": 3, "label": "CDN FW",
+      "id": "node-dead",
+      "type": "exit",
+      "col": 3,
+      "row": 1,
+      "label": "0.0.0.0/0"
+    },
+    {
+      "id": "node-fw",
+      "type": "firewall",
+      "col": 5,
+      "row": 3,
+      "label": "CDN FW",
       "firewallRules": [
-        { "port": 80,  "protocol": "*", "action": "allow" },
-        { "port": "*", "protocol": "*", "action": "deny"  }
+        {
+          "port": 80,
+          "protocol": "*",
+          "action": "allow"
+        },
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
     {
-      "id": "node-dns",   "type": "dns-resolver", "col": 7, "row": 3,
+      "id": "node-dns",
+      "type": "dns-resolver",
+      "col": 7,
+      "row": 3,
       "checkpoint": true,
       "label": "CDN DNS",
-      "dnsRecord": { "domain": "api.example.com", "resolvedIP": "10.60.1.5" }
+      "dnsRecord": {
+        "domain": "api.example.com",
+        "resolvedIP": "10.60.1.5"
+      }
     },
     {
-      "id": "node-cdn",   "type": "router",       "col": 9, "row": 3,
+      "id": "node-cdn",
+      "type": "router",
+      "col": 9,
+      "row": 3,
       "label": "CDN Router",
       "routingTable": [
-        { "prefix": "10.60.1.0/24", "nextHop": "node-edge",   "interface": "edge0" },
-        { "prefix": "10.60.0.0/16", "nextHop": "node-origin", "interface": "eth1"  }
+        {
+          "prefix": "10.60.1.0/24",
+          "nextHop": "node-edge",
+          "interface": "edge0"
+        },
+        {
+          "prefix": "10.60.0.0/16",
+          "nextHop": "node-origin",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-origin","type": "exit",         "col": 9, "row": 1, "label": "origin (CACHE MISS)" },
-    { "id": "node-edge",  "type": "destination",  "col": 11,"row": 3, "label": "CDN edge (CACHE HIT)" }
+    {
+      "id": "node-origin",
+      "type": "exit",
+      "col": 9,
+      "row": 1,
+      "label": "origin (CACHE MISS)"
+    },
+    {
+      "id": "node-edge",
+      "type": "destination",
+      "col": 11,
+      "row": 3,
+      "label": "CDN edge (CACHE HIT)"
+    }
   ],
   "edges": [
-    { "from": "node-spawn",  "to": "node-r1",     "directed": false, "dropRate": 0 },
-    { "from": "node-r1",     "to": "node-dead",   "directed": false, "dropRate": 0 },
-    { "from": "node-r1",     "to": "node-fw",     "directed": false, "dropRate": 0 },
-    { "from": "node-fw",     "to": "node-dns",    "directed": false, "dropRate": 0 },
-    { "from": "node-dns",    "to": "node-cdn",    "directed": false, "dropRate": 0 },
-    { "from": "node-cdn",    "to": "node-origin", "directed": false, "dropRate": 0 },
-    { "from": "node-cdn",    "to": "node-edge",   "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-dead",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-fw",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw",
+      "to": "node-dns",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-dns",
+      "to": "node-cdn",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-cdn",
+      "to": "node-origin",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-cdn",
+      "to": "node-edge",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",    "text": "YOU: 10.0.5.5",         "attachToNode": "node-spawn",  "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-dest",   "text": "DEST: api.example.com", "attachToNode": "node-spawn",  "offsetY": -58, "style": "ip-label"   },
-    { "id": "lbl-port",   "text": "PORT: 80 (HTTP)",        "attachToNode": "node-spawn",  "offsetY": -76, "style": "port-label" },
-    { "id": "lbl-dns",    "text": "→ 10.60.1.5",           "attachToNode": "node-dns",    "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-hit",    "text": "10.60.1.0/24 (HIT)",    "attachToNode": "node-edge",   "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-miss",   "text": "10.60.0.0/16 (MISS)",   "attachToNode": "node-origin", "offsetY": -40, "style": "rule-text"  }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 10.0.5.5",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: api.example.com",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-port",
+      "text": "PORT: 80 (HTTP)",
+      "attachToNode": "node-spawn",
+      "offsetY": -76,
+      "style": "port-label"
+    },
+    {
+      "id": "lbl-dns",
+      "text": "→ 10.60.1.5",
+      "attachToNode": "node-dns",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-hit",
+      "text": "10.60.1.0/24 (HIT)",
+      "attachToNode": "node-edge",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-miss",
+      "text": "10.60.0.0/16 (MISS)",
+      "attachToNode": "node-origin",
+      "offsetY": -40,
+      "style": "rule-text"
+    }
   ],
   "termIntroductions": [
     {
@@ -126,5 +267,12 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-r1", "node-fw", "node-dns", "node-cdn", "node-edge"]
+  "correctPath": [
+    "node-spawn",
+    "node-r1",
+    "node-fw",
+    "node-dns",
+    "node-cdn",
+    "node-edge"
+  ]
 }

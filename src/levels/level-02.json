@@ -4,7 +4,9 @@
   "concept": "multiple-hops",
   "theory": {
     "title": "Hops: One Router at a Time",
-    "buildsOn": ["routing-table"],
+    "buildsOn": [
+      "routing-table"
+    ],
     "recap": "Last level you read one routing table and followed the matching exit. This level does the same thing twice in a row: each router reads its own table, with no shared knowledge of the path.",
     "newConcept": "multi-hop",
     "plainObjective": "Navigate through two routers in a chain - each one makes its own independent decision about where to send you.",
@@ -12,11 +14,11 @@
     "bodyParagraphs": [
       {
         "heading": "Each router decides independently",
-        "text": "Each router you pass through counts as one hop. At every hop, that router reads your destination IP and consults its own routing table - completely independent of every other router on the path. Routers do not coordinate with each other; each one makes a local decision based only on what it knows."
+        "text": "Each router reads your destination IP and consults its own routing table - completely independent of every other router on the path. Routers do not coordinate; each makes a local decision based only on what it knows."
       },
       {
         "heading": "Time to Live (TTL)",
-        "text": "A TTL counter is embedded in every packet. Each router decrements it by 1 before forwarding. If TTL reaches 0, the packet is dropped. This prevents packets from circling the internet indefinitely when routing loops occur."
+        "text": "A <code>TTL</code> counter is embedded in every packet. Each router decrements it by 1 before forwarding. If <code>TTL</code> reaches 0, the packet is dropped. This prevents packets from looping indefinitely when routing loops occur."
       }
     ],
     "mission": "You are 10.0.1.5 delivering to 10.0.2.10.\n\nTwo routers stand between you and the destination. At each hop, read that router's table independently and follow the matching exit."
@@ -51,8 +53,16 @@
       "label": "R1",
       "checkpoint": true,
       "routingTable": [
-        { "prefix": "10.0.2.0/24",    "nextHop": "node-r2",    "interface": "eth0" },
-        { "prefix": "192.168.0.0/16", "nextHop": "node-dead1", "interface": "eth1" }
+        {
+          "prefix": "10.0.2.0/24",
+          "nextHop": "node-r2",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "192.168.0.0/16",
+          "nextHop": "node-dead1",
+          "interface": "eth1"
+        }
       ]
     },
     {
@@ -70,8 +80,16 @@
       "label": "R2",
       "checkpoint": true,
       "routingTable": [
-        { "prefix": "10.0.2.0/24", "nextHop": "node-exit", "interface": "eth0" },
-        { "prefix": "10.0.1.0/24", "nextHop": "node-dead2", "interface": "eth1" }
+        {
+          "prefix": "10.0.2.0/24",
+          "nextHop": "node-exit",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "10.0.1.0/24",
+          "nextHop": "node-dead2",
+          "interface": "eth1"
+        }
       ]
     },
     {
@@ -97,12 +115,42 @@
     }
   ],
   "edges": [
-    { "from": "node-spawn",  "to": "node-r1",    "directed": false, "dropRate": 0 },
-    { "from": "node-r1",     "to": "node-dead1",  "directed": false, "dropRate": 0 },
-    { "from": "node-r1",     "to": "node-r2",     "directed": false, "dropRate": 0 },
-    { "from": "node-r2",     "to": "node-dead2",  "directed": false, "dropRate": 0 },
-    { "from": "node-r2",     "to": "node-exit",   "directed": false, "dropRate": 0 },
-    { "from": "node-exit",   "to": "node-dest",   "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-dead1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-r2",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r2",
+      "to": "node-dead2",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r2",
+      "to": "node-exit",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-exit",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
@@ -141,5 +189,11 @@
   ],
   "checkpointBehavior": "last-router",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-r1", "node-r2", "node-exit", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-r1",
+    "node-r2",
+    "node-exit",
+    "node-dest"
+  ]
 }

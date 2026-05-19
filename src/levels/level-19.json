@@ -4,7 +4,11 @@
   "concept": "ixp",
   "theory": {
     "title": "IXP: Where the Internet Physically Meets",
-    "buildsOn": ["bgp", "routing-table", "multi-hop"],
+    "buildsOn": [
+      "bgp",
+      "routing-table",
+      "multi-hop"
+    ],
     "recap": "BGP peers exchange routes between Autonomous Systems. But peering requires a physical connection between the two networks' routers. When two ISPs want to exchange traffic, they need a place to connect - and that place is an Internet Exchange Point.",
     "newConcept": "ixp",
     "plainObjective": "Two ISPs (AS-A and AS-B) are connected at an IXP. The direct peering path through the IXP is faster and cheaper than the transit path through the transit provider. Route via the IXP.",
@@ -12,19 +16,19 @@
     "bodyParagraphs": [
       {
         "heading": "What is an IXP?",
-        "text": "An Internet Exchange Point is a physical data center where many networks connect to a shared switching fabric. Instead of each pair of ISPs running a private cable between their routers, everyone connects to the IXP switch and peers with anyone else there. One connection, many peers."
+        "text": "An Internet Exchange Point is a data center where many networks connect to a shared switch. Instead of each pair of ISPs running a private cable, everyone connects to the IXP and peers with any other member. One connection, many peers."
       },
       {
         "heading": "Peering vs transit",
-        "text": "Peering: two networks directly exchange each other's traffic, typically for free or low cost (settlement-free peering). Transit: a smaller network pays a larger network to carry its traffic to the rest of the internet. IXPs facilitate peering. Transit providers are the alternative when no peering agreement exists."
+        "text": "<ul><li><strong>Peering</strong> - two networks exchange traffic directly, typically for free</li><li><strong>Transit</strong> - a smaller network pays a larger network to carry its traffic to the rest of the internet</li></ul>IXPs facilitate peering. Transit is the alternative when no peering agreement exists."
       },
       {
         "heading": "Why IXPs reduce latency",
-        "text": "Without an IXP, traffic between two local ISPs might travel out to a transit provider's backbone and back - adding hundreds of milliseconds and multiple hops. Through an IXP, the same traffic stays local: two hops instead of ten. Local traffic stays local."
+        "text": "Without an IXP, traffic between two local ISPs might travel to a transit backbone and back, adding hundreds of milliseconds. Through an IXP, the same traffic stays local: two hops instead of ten."
       },
       {
         "heading": "BGP at the IXP",
-        "text": "At an IXP, each member runs BGP sessions with the other members via a shared route server. The route server collects and distributes prefixes so each member doesn't need a direct BGP session with every other member. IXPs often have hundreds of members."
+        "text": "At an IXP, members run BGP sessions via a shared route server. The route server collects and distributes prefixes so each member doesn't need a direct BGP session with every other member."
       }
     ],
     "mission": "Your packet travels from a client in AS-A's network to a server in AS-B's network (203.0.113.10).\n\nTwo paths exist: through the transit provider (expensive, more hops) or through the IXP (direct peering, fewer hops). The BGP table in AS-A prefers the IXP path for AS-B's prefixes. Route via the IXP."
@@ -38,75 +42,249 @@
     "destIP": "203.0.113.10",
     "portTag": 80
   },
-  "destination": { "nodeId": "node-dest", "label": "AS-B server" },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "AS-B server"
+  },
   "nodes": [
-    { "id": "node-spawn",   "type": "spawn",   "col": 1,  "row": 3 },
     {
-      "id": "node-r1",      "type": "router",  "col": 3,  "row": 3,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 3
+    },
+    {
+      "id": "node-r1",
+      "type": "router",
+      "col": 3,
+      "row": 3,
       "checkpoint": true,
       "label": "R1",
       "routingTable": [
-        { "prefix": "203.0.113.0/24", "nextHop": "node-fw",      "interface": "eth0" },
-        { "prefix": "0.0.0.0/0",      "nextHop": "node-dead",    "interface": "eth1" }
+        {
+          "prefix": "203.0.113.0/24",
+          "nextHop": "node-fw",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead",    "type": "exit",    "col": 3,  "row": 1, "label": "0.0.0.0/0" },
     {
-      "id": "node-fw",      "type": "firewall","col": 5,  "row": 3, "label": "Edge FW",
+      "id": "node-dead",
+      "type": "exit",
+      "col": 3,
+      "row": 1,
+      "label": "0.0.0.0/0"
+    },
+    {
+      "id": "node-fw",
+      "type": "firewall",
+      "col": 5,
+      "row": 3,
+      "label": "Edge FW",
       "firewallRules": [
-        { "port": 80,  "protocol": "*", "action": "allow" },
-        { "port": "*", "protocol": "*", "action": "deny"  }
+        {
+          "port": 80,
+          "protocol": "*",
+          "action": "allow"
+        },
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
     {
-      "id": "node-as-a",    "type": "as-node", "col": 7,  "row": 3,
+      "id": "node-as-a",
+      "type": "as-node",
+      "col": 7,
+      "row": 3,
       "checkpoint": true,
       "label": "AS-A (64510)",
       "routingTable": [
-        { "prefix": "203.0.113.0/24", "nextHop": "node-ixp",     "interface": "ixp-peer" },
-        { "prefix": "0.0.0.0/0",      "nextHop": "node-transit", "interface": "transit"  }
+        {
+          "prefix": "203.0.113.0/24",
+          "nextHop": "node-ixp",
+          "interface": "ixp-peer"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-transit",
+          "interface": "transit"
+        }
       ]
     },
-    { "id": "node-transit", "type": "exit",    "col": 7,  "row": 1, "label": "Transit (expensive)" },
     {
-      "id": "node-ixp",     "type": "router",  "col": 9,  "row": 3,
+      "id": "node-transit",
+      "type": "exit",
+      "col": 7,
+      "row": 1,
+      "label": "Transit (expensive)"
+    },
+    {
+      "id": "node-ixp",
+      "type": "router",
+      "col": 9,
+      "row": 3,
       "label": "IXP Switch",
       "routingTable": [
-        { "prefix": "203.0.113.0/24", "nextHop": "node-as-b",    "interface": "port-AS-B" },
-        { "prefix": "0.0.0.0/0",      "nextHop": "node-dead2",   "interface": "drop"      }
+        {
+          "prefix": "203.0.113.0/24",
+          "nextHop": "node-as-b",
+          "interface": "port-AS-B"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead2",
+          "interface": "drop"
+        }
       ]
     },
-    { "id": "node-dead2",   "type": "exit",    "col": 9,  "row": 1, "label": "not a member" },
     {
-      "id": "node-as-b",    "type": "as-node", "col": 11, "row": 3,
+      "id": "node-dead2",
+      "type": "exit",
+      "col": 9,
+      "row": 1,
+      "label": "not a member"
+    },
+    {
+      "id": "node-as-b",
+      "type": "as-node",
+      "col": 11,
+      "row": 3,
       "label": "AS-B (64511)",
       "routingTable": [
-        { "prefix": "203.0.113.0/24", "nextHop": "node-dest",    "interface": "eth0" },
-        { "prefix": "0.0.0.0/0",      "nextHop": "node-dead3",   "interface": "eth1" }
+        {
+          "prefix": "203.0.113.0/24",
+          "nextHop": "node-dest",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead3",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead3",   "type": "exit",    "col": 11, "row": 1, "label": "no route" },
-    { "id": "node-dest",    "type": "destination","col": 13,"row": 3, "label": "AS-B server" }
+    {
+      "id": "node-dead3",
+      "type": "exit",
+      "col": 11,
+      "row": 1,
+      "label": "no route"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 13,
+      "row": 3,
+      "label": "AS-B server"
+    }
   ],
   "edges": [
-    { "from": "node-spawn",   "to": "node-r1",      "directed": false, "dropRate": 0 },
-    { "from": "node-r1",      "to": "node-dead",    "directed": false, "dropRate": 0 },
-    { "from": "node-r1",      "to": "node-fw",      "directed": false, "dropRate": 0 },
-    { "from": "node-fw",      "to": "node-as-a",    "directed": false, "dropRate": 0 },
-    { "from": "node-as-a",    "to": "node-transit", "directed": false, "dropRate": 0 },
-    { "from": "node-as-a",    "to": "node-ixp",     "directed": false, "dropRate": 0 },
-    { "from": "node-ixp",     "to": "node-dead2",   "directed": false, "dropRate": 0 },
-    { "from": "node-ixp",     "to": "node-as-b",    "directed": false, "dropRate": 0 },
-    { "from": "node-as-b",    "to": "node-dead3",   "directed": false, "dropRate": 0 },
-    { "from": "node-as-b",    "to": "node-dest",    "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-dead",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-fw",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw",
+      "to": "node-as-a",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-as-a",
+      "to": "node-transit",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-as-a",
+      "to": "node-ixp",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-ixp",
+      "to": "node-dead2",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-ixp",
+      "to": "node-as-b",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-as-b",
+      "to": "node-dead3",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-as-b",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",     "text": "YOU: 10.0.5.5",         "attachToNode": "node-spawn",   "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-dest",    "text": "DEST: 203.0.113.10",    "attachToNode": "node-spawn",   "offsetY": -58, "style": "ip-label"   },
-    { "id": "lbl-port",    "text": "PORT: 80",               "attachToNode": "node-spawn",   "offsetY": -76, "style": "port-label" },
-    { "id": "lbl-transit", "text": "transit (costlier)",     "attachToNode": "node-transit", "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-ixp",     "text": "IXP peering",           "attachToNode": "node-ixp",     "offsetY": -40, "style": "cidr-label" }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 10.0.5.5",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: 203.0.113.10",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-port",
+      "text": "PORT: 80",
+      "attachToNode": "node-spawn",
+      "offsetY": -76,
+      "style": "port-label"
+    },
+    {
+      "id": "lbl-transit",
+      "text": "transit (costlier)",
+      "attachToNode": "node-transit",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-ixp",
+      "text": "IXP peering",
+      "attachToNode": "node-ixp",
+      "offsetY": -40,
+      "style": "cidr-label"
+    }
   ],
   "termIntroductions": [
     {
@@ -133,5 +311,13 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-r1", "node-fw", "node-as-a", "node-ixp", "node-as-b", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-r1",
+    "node-fw",
+    "node-as-a",
+    "node-ixp",
+    "node-as-b",
+    "node-dest"
+  ]
 }

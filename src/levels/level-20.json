@@ -4,7 +4,12 @@
   "concept": "mitm",
   "theory": {
     "title": "MITM: When the Server Is Not Who It Claims",
-    "buildsOn": ["tls", "tcp-handshake", "firewall", "routing-table"],
+    "buildsOn": [
+      "tls",
+      "tcp-handshake",
+      "firewall",
+      "routing-table"
+    ],
     "recap": "TLS authenticates the server via a certificate. But what if someone intercepts the connection before TLS begins and presents a fake certificate? That is a man-in-the-middle attack - and it succeeds only if the client accepts the fake certificate.",
     "newConcept": "mitm",
     "plainObjective": "Complete the TCP handshake, then choose the correct TLS path. One path leads to a MITM proxy presenting a forged certificate. The HSTS-protected path leads directly to the real server. Read the labels carefully.",
@@ -12,19 +17,19 @@
     "bodyParagraphs": [
       {
         "heading": "How MITM attacks work",
-        "text": "An attacker positions themselves between your device and the server - on the same WiFi, at a compromised router, or via BGP hijacking. They intercept your TCP connection and present their own certificate. If you accept it, they see all your traffic as plaintext before forwarding it."
+        "text": "An attacker positions themselves between your device and the server. They intercept your TCP connection and present their own certificate. If you accept it, they see all your traffic as plaintext before forwarding it."
       },
       {
         "heading": "Certificate validation defeats MITM",
-        "text": "TLS certificate validation is the defense. The browser checks: Is the certificate signed by a trusted CA? Does the domain name match? Is it within its validity period? A MITM must forge all three - which requires compromising a CA, an extremely high bar."
+        "text": "TLS certificate validation is the defense. The browser checks:<ul><li>Is the certificate signed by a trusted CA?</li><li>Does the domain name match?</li><li>Is it within its validity period?</li></ul>A MITM must forge all three - which requires compromising a CA."
       },
       {
         "heading": "HSTS: preemptive defense",
-        "text": "HSTS (HTTP Strict Transport Security) is a response header: Strict-Transport-Security: max-age=31536000; includeSubDomains. It tells the browser to always use HTTPS and refuse to connect if any certificate error occurs - not even a user-click-through override. HSTS preload goes further: browsers ship with lists of HSTS sites."
+        "text": "HSTS tells the browser to always use HTTPS and refuse to connect on any certificate error. The response header is:<br><code>Strict-Transport-Security: max-age=31536000; includeSubDomains</code><br>HSTS preload goes further: browsers ship with a list of HSTS sites baked in."
       },
       {
         "heading": "Certificate pinning",
-        "text": "Certificate pinning hardcodes a specific certificate or CA into an application. Even if a fraudulent CA issues a certificate for your domain, a pinned app rejects it. Mobile banking apps commonly use pinning. The downside: if your real cert changes, you must update the app."
+        "text": "Pinning hardcodes a specific certificate or CA into an application. Even if a fraudulent CA issues a cert for your domain, a pinned app rejects it. Downside: if your real cert changes, you must update the app."
       }
     ],
     "mission": "Your packet connects to secure.example.com (10.70.1.10) on port 443.\n\nComplete the TCP handshake, then face a TLS fork. The left path is a MITM proxy with a forged certificate. The HSTS path (right) connects directly to the legitimate server with a valid certificate. Choose wisely."
@@ -39,57 +44,235 @@
     "portTag": 443,
     "tlsState": "TLS_IDLE"
   },
-  "destination": { "nodeId": "node-dest", "requiresTcpState": "ESTABLISHED", "label": "secure-server (valid cert)" },
+  "destination": {
+    "nodeId": "node-dest",
+    "requiresTcpState": "ESTABLISHED",
+    "label": "secure-server (valid cert)"
+  },
   "nodes": [
-    { "id": "node-spawn",  "type": "spawn",    "col": 1,  "row": 3 },
     {
-      "id": "node-r1",     "type": "router",   "col": 3,  "row": 3,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 3
+    },
+    {
+      "id": "node-r1",
+      "type": "router",
+      "col": 3,
+      "row": 3,
       "checkpoint": true,
       "label": "R1",
       "routingTable": [
-        { "prefix": "10.70.1.0/24", "nextHop": "node-fw",    "interface": "eth0" },
-        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead",  "interface": "eth1" }
+        {
+          "prefix": "10.70.1.0/24",
+          "nextHop": "node-fw",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead",   "type": "exit",     "col": 3,  "row": 1, "label": "0.0.0.0/0" },
     {
-      "id": "node-fw",     "type": "firewall", "col": 5,  "row": 3, "label": "HTTPS FW",
+      "id": "node-dead",
+      "type": "exit",
+      "col": 3,
+      "row": 1,
+      "label": "0.0.0.0/0"
+    },
+    {
+      "id": "node-fw",
+      "type": "firewall",
+      "col": 5,
+      "row": 3,
+      "label": "HTTPS FW",
       "firewallRules": [
-        { "port": 443, "protocol": "*", "action": "allow" },
-        { "port": "*", "protocol": "*", "action": "deny"  }
+        {
+          "port": 443,
+          "protocol": "*",
+          "action": "allow"
+        },
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
-    { "id": "node-syn",    "type": "tcp-node", "col": 7,  "row": 3, "tcpStep": "syn",     "label": "TCP SYN",     "checkpoint": true },
-    { "id": "node-synack", "type": "tcp-node", "col": 8,  "row": 3, "tcpStep": "syn-ack", "label": "TCP SYN-ACK" },
-    { "id": "node-ack",    "type": "tcp-node", "col": 9,  "row": 3, "tcpStep": "ack",     "label": "TCP ACK",     "checkpoint": true },
-    { "id": "node-fork",   "type": "http-node","col": 10, "row": 3, "label": "TLS fork",   "checkpoint": true },
-    { "id": "node-mitm",   "type": "exit",     "col": 10, "row": 1, "label": "MITM Proxy (forged cert)" },
     {
-      "id": "node-tls-ch", "type": "tls-node", "col": 11, "row": 3, "tlsStep": "client-hello", "label": "1. ClientHello" },
+      "id": "node-syn",
+      "type": "tcp-node",
+      "col": 7,
+      "row": 3,
+      "tcpStep": "syn",
+      "label": "TCP SYN",
+      "checkpoint": true
+    },
     {
-      "id": "node-tls-sc", "type": "tls-node", "col": 12, "row": 3, "tlsStep": "server-cert",  "label": "2. Valid Cert"   },
-    { "id": "node-dest",   "type": "destination","col": 13,"row": 3, "label": "secure-server (valid cert)", "requiresTcpState": "ESTABLISHED" }
+      "id": "node-synack",
+      "type": "tcp-node",
+      "col": 8,
+      "row": 3,
+      "tcpStep": "syn-ack",
+      "label": "TCP SYN-ACK"
+    },
+    {
+      "id": "node-ack",
+      "type": "tcp-node",
+      "col": 9,
+      "row": 3,
+      "tcpStep": "ack",
+      "label": "TCP ACK",
+      "checkpoint": true
+    },
+    {
+      "id": "node-fork",
+      "type": "http-node",
+      "col": 10,
+      "row": 3,
+      "label": "TLS fork",
+      "checkpoint": true
+    },
+    {
+      "id": "node-mitm",
+      "type": "exit",
+      "col": 10,
+      "row": 1,
+      "label": "MITM Proxy (forged cert)"
+    },
+    {
+      "id": "node-tls-ch",
+      "type": "tls-node",
+      "col": 11,
+      "row": 3,
+      "tlsStep": "client-hello",
+      "label": "1. ClientHello"
+    },
+    {
+      "id": "node-tls-sc",
+      "type": "tls-node",
+      "col": 12,
+      "row": 3,
+      "tlsStep": "server-cert",
+      "label": "2. Valid Cert"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 13,
+      "row": 3,
+      "label": "secure-server (valid cert)",
+      "requiresTcpState": "ESTABLISHED"
+    }
   ],
   "edges": [
-    { "from": "node-spawn",  "to": "node-r1",      "directed": false, "dropRate": 0 },
-    { "from": "node-r1",     "to": "node-dead",    "directed": false, "dropRate": 0 },
-    { "from": "node-r1",     "to": "node-fw",      "directed": false, "dropRate": 0 },
-    { "from": "node-fw",     "to": "node-syn",     "directed": false, "dropRate": 0 },
-    { "from": "node-syn",    "to": "node-synack",  "directed": false, "dropRate": 0 },
-    { "from": "node-synack", "to": "node-ack",     "directed": false, "dropRate": 0 },
-    { "from": "node-ack",    "to": "node-fork",    "directed": false, "dropRate": 0 },
-    { "from": "node-fork",   "to": "node-mitm",    "directed": false, "dropRate": 0 },
-    { "from": "node-fork",   "to": "node-tls-ch",  "directed": false, "dropRate": 0 },
-    { "from": "node-tls-ch", "to": "node-tls-sc",  "directed": false, "dropRate": 0 },
-    { "from": "node-tls-sc", "to": "node-dest",    "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-dead",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-fw",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw",
+      "to": "node-syn",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-syn",
+      "to": "node-synack",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-synack",
+      "to": "node-ack",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-ack",
+      "to": "node-fork",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fork",
+      "to": "node-mitm",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fork",
+      "to": "node-tls-ch",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-tls-ch",
+      "to": "node-tls-sc",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-tls-sc",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",   "text": "YOU: 10.0.5.5",         "attachToNode": "node-spawn",  "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-dest",  "text": "DEST: 10.70.1.10",      "attachToNode": "node-spawn",  "offsetY": -58, "style": "ip-label"   },
-    { "id": "lbl-port",  "text": "PORT: 443 (HTTPS)",      "attachToNode": "node-spawn",  "offsetY": -76, "style": "port-label" },
-    { "id": "lbl-mitm",  "text": "forged cert",            "attachToNode": "node-mitm",   "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-hsts",  "text": "HSTS-preloaded path →", "attachToNode": "node-tls-ch", "offsetY": -40, "style": "cidr-label" }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 10.0.5.5",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: 10.70.1.10",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-port",
+      "text": "PORT: 443 (HTTPS)",
+      "attachToNode": "node-spawn",
+      "offsetY": -76,
+      "style": "port-label"
+    },
+    {
+      "id": "lbl-mitm",
+      "text": "forged cert",
+      "attachToNode": "node-mitm",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-hsts",
+      "text": "HSTS-preloaded path →",
+      "attachToNode": "node-tls-ch",
+      "offsetY": -40,
+      "style": "cidr-label"
+    }
   ],
   "termIntroductions": [
     {
@@ -123,5 +306,16 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-r1", "node-fw", "node-syn", "node-synack", "node-ack", "node-fork", "node-tls-ch", "node-tls-sc", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-r1",
+    "node-fw",
+    "node-syn",
+    "node-synack",
+    "node-ack",
+    "node-fork",
+    "node-tls-ch",
+    "node-tls-sc",
+    "node-dest"
+  ]
 }

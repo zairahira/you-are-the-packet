@@ -4,7 +4,11 @@
   "concept": "bgp",
   "theory": {
     "title": "BGP: Routing Between Networks",
-    "buildsOn": ["routing-table", "cidr", "multi-hop"],
+    "buildsOn": [
+      "routing-table",
+      "cidr",
+      "multi-hop"
+    ],
     "recap": "You know how routing tables direct packets within a single network using longest-prefix matching. But the internet is not one network - it is tens of thousands of independent networks (Autonomous Systems) that must agree on how to route between each other.",
     "newConcept": "bgp",
     "plainObjective": "Navigate from AS1 through AS2 to reach the destination in AS3. Each AS node has a BGP table showing which neighbor leads toward the destination prefix. Apply longest-prefix matching at each AS node.",
@@ -12,19 +16,19 @@
     "bodyParagraphs": [
       {
         "heading": "Autonomous Systems",
-        "text": "An Autonomous System (AS) is a network under single administrative control - an ISP, a university, a cloud provider. Each AS has a globally unique AS number (ASN). AS 15169 is Google, AS 16509 is Amazon AWS, AS 32934 is Meta. You can look up any ASN."
+        "text": "An Autonomous System (AS) is a network under single administrative control - an ISP, university, or cloud provider. Each AS has a globally unique AS number (ASN):<ul><li>AS 15169 - Google</li><li>AS 16509 - Amazon AWS</li><li>AS 32934 - Meta</li></ul>"
       },
       {
         "heading": "BGP peering",
-        "text": "Two AS operators configure a BGP session between their routers (called BGP peers). They exchange routing information: 'I can reach 203.0.113.0/24 via my network.' BGP routes propagate hop by hop between peers until every AS knows a path to every prefix."
+        "text": "Two AS operators configure a BGP session between their routers (BGP peers). They exchange routing information: \"I can reach <code>203.0.113.0/24</code> via my network.\" Routes propagate hop by hop until every AS knows a path to every prefix."
       },
       {
         "heading": "AS path",
-        "text": "BGP advertises not just the prefix but the full path of ASes to reach it. A prefix with AS path '64500 64501 64502' means the packet would traverse three ASes. Longer AS paths are less preferred. AS path length is BGP's primary tie-breaker."
+        "text": "BGP advertises not just the prefix but the full list of ASes to reach it. An AS path of <code>64500 64501 64502</code> means the packet traverses three ASes. Longer AS paths are less preferred."
       },
       {
         "heading": "BGP tables use CIDR, just like IP routing",
-        "text": "BGP tables are just routing tables with CIDR prefixes - the same longest-prefix match algorithm applies. The difference is that entries come from BGP peers (other ASes) rather than local configuration, and they carry AS path attributes."
+        "text": "BGP tables are routing tables with CIDR prefixes - the same longest-prefix match algorithm applies. The difference: entries come from BGP peers rather than local configuration."
       }
     ],
     "mission": "You carry a packet from AS1 (srcIP: 203.0.113.5) destined for 198.51.100.10 in AS3.\n\nEach AS node has a BGP table. Apply longest-prefix matching at each hop. Some exits lead to the wrong AS - the BGP table will tell you which exit is correct."
@@ -38,62 +42,197 @@
     "destIP": "198.51.100.10",
     "portTag": 80
   },
-  "destination": { "nodeId": "node-dest", "label": "AS3 server" },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "AS3 server"
+  },
   "nodes": [
-    { "id": "node-spawn",  "type": "spawn",   "col": 1, "row": 3 },
     {
-      "id": "node-as1",    "type": "as-node", "col": 3, "row": 3,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 3
+    },
+    {
+      "id": "node-as1",
+      "type": "as-node",
+      "col": 3,
+      "row": 3,
       "checkpoint": true,
       "label": "AS1 (64500)",
       "routingTable": [
-        { "prefix": "198.51.100.0/24", "nextHop": "node-fw",    "interface": "peer-AS2" },
-        { "prefix": "0.0.0.0/0",       "nextHop": "node-dead1", "interface": "peer-AS4" }
+        {
+          "prefix": "198.51.100.0/24",
+          "nextHop": "node-fw",
+          "interface": "peer-AS2"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead1",
+          "interface": "peer-AS4"
+        }
       ]
     },
-    { "id": "node-dead1",  "type": "exit",    "col": 3, "row": 1, "label": "AS4 (wrong AS)" },
     {
-      "id": "node-fw",     "type": "firewall","col": 5, "row": 3, "label": "Border FW",
+      "id": "node-dead1",
+      "type": "exit",
+      "col": 3,
+      "row": 1,
+      "label": "AS4 (wrong AS)"
+    },
+    {
+      "id": "node-fw",
+      "type": "firewall",
+      "col": 5,
+      "row": 3,
+      "label": "Border FW",
       "firewallRules": [
-        { "port": 80,  "protocol": "*", "action": "allow" },
-        { "port": "*", "protocol": "*", "action": "deny"  }
+        {
+          "port": 80,
+          "protocol": "*",
+          "action": "allow"
+        },
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
     {
-      "id": "node-as2",    "type": "as-node", "col": 7, "row": 3,
+      "id": "node-as2",
+      "type": "as-node",
+      "col": 7,
+      "row": 3,
       "checkpoint": true,
       "label": "AS2 (64501)",
       "routingTable": [
-        { "prefix": "198.51.100.0/24", "nextHop": "node-as3",   "interface": "peer-AS3" },
-        { "prefix": "0.0.0.0/0",       "nextHop": "node-dead2", "interface": "peer-AS5" }
+        {
+          "prefix": "198.51.100.0/24",
+          "nextHop": "node-as3",
+          "interface": "peer-AS3"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead2",
+          "interface": "peer-AS5"
+        }
       ]
     },
-    { "id": "node-dead2",  "type": "exit",    "col": 7, "row": 1, "label": "AS5 (wrong AS)" },
     {
-      "id": "node-as3",    "type": "as-node", "col": 9, "row": 3,
+      "id": "node-dead2",
+      "type": "exit",
+      "col": 7,
+      "row": 1,
+      "label": "AS5 (wrong AS)"
+    },
+    {
+      "id": "node-as3",
+      "type": "as-node",
+      "col": 9,
+      "row": 3,
       "label": "AS3 (64502)",
       "routingTable": [
-        { "prefix": "198.51.100.0/24", "nextHop": "node-dest",  "interface": "eth0" },
-        { "prefix": "0.0.0.0/0",       "nextHop": "node-dead3", "interface": "eth1" }
+        {
+          "prefix": "198.51.100.0/24",
+          "nextHop": "node-dest",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead3",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead3",  "type": "exit",    "col": 9, "row": 1, "label": "unknown prefix" },
-    { "id": "node-dest",   "type": "destination","col": 11,"row": 3, "label": "AS3 server" }
+    {
+      "id": "node-dead3",
+      "type": "exit",
+      "col": 9,
+      "row": 1,
+      "label": "unknown prefix"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 11,
+      "row": 3,
+      "label": "AS3 server"
+    }
   ],
   "edges": [
-    { "from": "node-spawn", "to": "node-as1",   "directed": false, "dropRate": 0 },
-    { "from": "node-as1",   "to": "node-dead1", "directed": false, "dropRate": 0 },
-    { "from": "node-as1",   "to": "node-fw",    "directed": false, "dropRate": 0 },
-    { "from": "node-fw",    "to": "node-as2",   "directed": false, "dropRate": 0 },
-    { "from": "node-as2",   "to": "node-dead2", "directed": false, "dropRate": 0 },
-    { "from": "node-as2",   "to": "node-as3",   "directed": false, "dropRate": 0 },
-    { "from": "node-as3",   "to": "node-dead3", "directed": false, "dropRate": 0 },
-    { "from": "node-as3",   "to": "node-dest",  "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-as1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-as1",
+      "to": "node-dead1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-as1",
+      "to": "node-fw",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw",
+      "to": "node-as2",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-as2",
+      "to": "node-dead2",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-as2",
+      "to": "node-as3",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-as3",
+      "to": "node-dead3",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-as3",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",  "text": "YOU: 203.0.113.5",    "attachToNode": "node-spawn", "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-dest", "text": "DEST: 198.51.100.10", "attachToNode": "node-spawn", "offsetY": -58, "style": "ip-label"   },
-    { "id": "lbl-port", "text": "PORT: 80",             "attachToNode": "node-spawn", "offsetY": -76, "style": "port-label" }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 203.0.113.5",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: 198.51.100.10",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-port",
+      "text": "PORT: 80",
+      "attachToNode": "node-spawn",
+      "offsetY": -76,
+      "style": "port-label"
+    }
   ],
   "termIntroductions": [
     {
@@ -120,5 +259,12 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-as1", "node-fw", "node-as2", "node-as3", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-as1",
+    "node-fw",
+    "node-as2",
+    "node-as3",
+    "node-dest"
+  ]
 }

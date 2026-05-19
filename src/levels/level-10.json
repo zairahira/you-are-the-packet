@@ -4,7 +4,11 @@
   "concept": "vlan",
   "theory": {
     "title": "VLANs: The Logical Divide",
-    "buildsOn": ["routing-table", "longest-prefix-match", "firewall"],
+    "buildsOn": [
+      "routing-table",
+      "longest-prefix-match",
+      "firewall"
+    ],
     "recap": "You've routed across IP subnets and passed through firewalls. Now you meet a different boundary - VLANs. A switched network keeps segments apart even when they share hardware, and the only way across is a Layer-3 device that still uses the same routing-table rules you've been reading since Level 1.",
     "newConcept": "vlan",
     "plainObjective": "Find the Layer-3 switch and use its routing table to bridge VLAN 10 and VLAN 20. Longest-prefix match still decides.",
@@ -12,19 +16,19 @@
     "bodyParagraphs": [
       {
         "heading": "Switches don't route",
-        "text": "A standard Layer-2 switch forwards frames using MAC addresses within the same network segment. It has no concept of subnets or IP routing. Connect a device to VLAN 10 and a device to VLAN 20 on the same physical switch and they will not talk - the switch keeps them separate by design."
+        "text": "A Layer-2 switch forwards frames using MAC addresses within the same network segment. It has no concept of subnets or IP routing. Devices on different VLANs on the same physical switch cannot talk - the switch keeps them isolated by design."
       },
       {
         "heading": "What is a VLAN?",
-        "text": "VLAN (Virtual LAN) is a way to logically partition a network. Ports on a switch are assigned to a VLAN number. Traffic from VLAN 10 stays in VLAN 10. Even if all devices share the same physical hardware, VLANs create isolated broadcast domains - as if they were on completely different physical switches."
+        "text": "VLAN (Virtual LAN) logically partitions a network. Ports are assigned to a VLAN number. Traffic from VLAN 10 stays in VLAN 10 - as if the devices were on completely separate physical switches."
       },
       {
         "heading": "Why segment?",
-        "text": "Organisations put different kinds of devices on different VLANs: IoT devices on VLAN 10, servers on VLAN 20, guest Wi-Fi on VLAN 30. If a device on the IoT VLAN is compromised, it cannot reach the server VLAN directly. Segmentation turns a flat network into a series of contained zones. Isolation is security."
+        "text": "Organisations put different device types on different VLANs:<ul><li>IoT devices - VLAN 10</li><li>Servers - VLAN 20</li><li>Guest Wi-Fi - VLAN 30</li></ul>If a device on the IoT VLAN is compromised, it cannot reach the server VLAN directly. Isolation is security."
       },
       {
         "heading": "Inter-VLAN routing",
-        "text": "To move traffic between VLANs you need a Layer-3 device with an interface in each VLAN. Its routing table follows the exact same rules you've been using: match the destination prefix, longest one wins. The L3 switch here has three overlapping routes - the new wrinkle is that it bridges VLANs, but the decision rule is unchanged."
+        "text": "To move traffic between VLANs you need a Layer-3 device with an interface in each VLAN. Its routing table uses the same longest-prefix match rules as always."
       }
     ],
     "mission": "You're 10.10.0.5 on VLAN 10. The destination 10.20.0.10 is on VLAN 20. Direct crossing is blocked - find the L3 switch and let its routing table pick the most specific route to VLAN 20."
@@ -39,50 +43,185 @@
     "portTag": null,
     "domainName": null
   },
-  "destination": { "nodeId": "node-dest", "label": "10.20.0.10" },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "10.20.0.10"
+  },
   "nodes": [
-    { "id": "node-spawn",   "type": "spawn",       "col": 1, "row": 4 },
-    { "id": "node-sw1",     "type": "exit",         "col": 3, "row": 4, "label": "VLAN 10" },
     {
-      "id": "node-fw-vlan", "type": "firewall",     "col": 5, "row": 4,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 4
+    },
+    {
+      "id": "node-sw1",
+      "type": "exit",
+      "col": 3,
+      "row": 4,
+      "label": "VLAN 10"
+    },
+    {
+      "id": "node-fw-vlan",
+      "type": "firewall",
+      "col": 5,
+      "row": 4,
       "label": "VLAN BOUNDARY",
       "firewallRules": [
-        { "port": "*", "protocol": "*", "action": "deny" }
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
-    { "id": "node-sw2",     "type": "exit",         "col": 7, "row": 4, "label": "VLAN 20" },
-    { "id": "node-dest",    "type": "destination",  "col": 9, "row": 4, "label": "10.20.0.10" },
     {
-      "id": "node-l3rtr",   "type": "router",       "col": 3, "row": 6,
+      "id": "node-sw2",
+      "type": "exit",
+      "col": 7,
+      "row": 4,
+      "label": "VLAN 20"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 9,
+      "row": 4,
+      "label": "10.20.0.10"
+    },
+    {
+      "id": "node-l3rtr",
+      "type": "router",
+      "col": 3,
+      "row": 6,
       "checkpoint": true,
       "label": "L3 SWITCH",
       "routingTable": [
-        { "prefix": "10.20.0.0/24", "nextHop": "node-mid",       "interface": "eth0" },
-        { "prefix": "10.0.0.0/8",   "nextHop": "node-dead-broad","interface": "eth1" },
-        { "prefix": "10.10.0.0/24", "nextHop": "node-sw1",        "interface": "eth2" }
+        {
+          "prefix": "10.20.0.0/24",
+          "nextHop": "node-mid",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "10.0.0.0/8",
+          "nextHop": "node-dead-broad",
+          "interface": "eth1"
+        },
+        {
+          "prefix": "10.10.0.0/24",
+          "nextHop": "node-sw1",
+          "interface": "eth2"
+        }
       ]
     },
-    { "id": "node-mid",        "type": "exit", "col": 7, "row": 6 },
-    { "id": "node-dead-broad", "type": "exit", "col": 5, "row": 6, "label": "10.0.0.0/8" }
+    {
+      "id": "node-mid",
+      "type": "exit",
+      "col": 7,
+      "row": 6
+    },
+    {
+      "id": "node-dead-broad",
+      "type": "exit",
+      "col": 5,
+      "row": 6,
+      "label": "10.0.0.0/8"
+    }
   ],
   "edges": [
-    { "from": "node-spawn",   "to": "node-sw1",        "directed": false, "dropRate": 0 },
-    { "from": "node-sw1",     "to": "node-fw-vlan",    "directed": false, "dropRate": 0 },
-    { "from": "node-fw-vlan", "to": "node-sw2",        "directed": false, "dropRate": 0 },
-    { "from": "node-sw2",     "to": "node-dest",       "directed": false, "dropRate": 0 },
-    { "from": "node-sw1",     "to": "node-l3rtr",      "directed": false, "dropRate": 0 },
-    { "from": "node-l3rtr",   "to": "node-mid",        "directed": false, "dropRate": 0 },
-    { "from": "node-l3rtr",   "to": "node-dead-broad", "directed": false, "dropRate": 0 },
-    { "from": "node-mid",     "to": "node-sw2",        "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-sw1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-sw1",
+      "to": "node-fw-vlan",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw-vlan",
+      "to": "node-sw2",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-sw2",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-sw1",
+      "to": "node-l3rtr",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-l3rtr",
+      "to": "node-mid",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-l3rtr",
+      "to": "node-dead-broad",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-mid",
+      "to": "node-sw2",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",   "text": "YOU: 10.10.0.5 (VLAN 10)",  "attachToNode": "node-spawn",   "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-dest",  "text": "DEST: 10.20.0.10 (VLAN 20)","attachToNode": "node-spawn",   "offsetY": -58, "style": "ip-label"   },
-    { "id": "lbl-sw1",   "text": "VLAN 10",                    "attachToNode": "node-sw1",     "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-fwv",   "text": "NO ROUTING",                 "attachToNode": "node-fw-vlan", "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-l3",    "text": "L3 SWITCH",                  "attachToNode": "node-l3rtr",   "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-sw2",   "text": "VLAN 20",                    "attachToNode": "node-sw2",     "offsetY": -40, "style": "cidr-label" }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 10.10.0.5 (VLAN 10)",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: 10.20.0.10 (VLAN 20)",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-sw1",
+      "text": "VLAN 10",
+      "attachToNode": "node-sw1",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-fwv",
+      "text": "NO ROUTING",
+      "attachToNode": "node-fw-vlan",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-l3",
+      "text": "L3 SWITCH",
+      "attachToNode": "node-l3rtr",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-sw2",
+      "text": "VLAN 20",
+      "attachToNode": "node-sw2",
+      "offsetY": -40,
+      "style": "cidr-label"
+    }
   ],
   "termIntroductions": [
     {
@@ -109,5 +248,12 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-sw1", "node-l3rtr", "node-mid", "node-sw2", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-sw1",
+    "node-l3rtr",
+    "node-mid",
+    "node-sw2",
+    "node-dest"
+  ]
 }

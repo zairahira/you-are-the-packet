@@ -4,7 +4,11 @@
   "concept": "cookies",
   "theory": {
     "title": "Cookies: How Servers Remember You",
-    "buildsOn": ["http-request", "routing-table", "firewall"],
+    "buildsOn": [
+      "http-request",
+      "routing-table",
+      "firewall"
+    ],
     "recap": "HTTP is stateless - every request is independent. The server has no memory of previous requests. But websites clearly remember who you are between pages. Cookies are the mechanism that adds state to a stateless protocol.",
     "newConcept": "cookies",
     "plainObjective": "Route to the login server to receive a session cookie, then present the cookie to pass the session gate and reach the dashboard.",
@@ -12,19 +16,19 @@
     "bodyParagraphs": [
       {
         "heading": "Set-Cookie and Cookie headers",
-        "text": "When you log in, the server responds with a Set-Cookie header: Set-Cookie: session=abc123; HttpOnly; Secure. Your browser stores that value. Every future request to that site includes: Cookie: session=abc123. The server looks up that session token to know who you are."
+        "text": "When you log in, the server responds with:<br><code>Set-Cookie: session=abc123; HttpOnly; Secure</code><br>Every future request includes:<br><code>Cookie: session=abc123</code><br>The server looks up that token to know who you are."
       },
       {
         "heading": "HttpOnly and Secure flags",
-        "text": "HttpOnly means JavaScript cannot read the cookie - protecting against XSS attacks. Secure means the cookie is only sent over HTTPS. Missing these flags is a common security mistake that lets attackers steal session tokens."
+        "text": "<ul><li><code>HttpOnly</code> - JavaScript cannot read the cookie, protecting against XSS</li><li><code>Secure</code> - cookie is only sent over HTTPS</li></ul>Missing these flags is a common mistake that lets attackers steal session tokens."
       },
       {
         "heading": "Session hijacking",
-        "text": "If an attacker captures your session cookie (via XSS or an unencrypted connection), they can impersonate you - the server sees the cookie and trusts it. This is called session hijacking. The server cannot tell it is not the real you."
+        "text": "If an attacker captures your session cookie, they can impersonate you. The server sees the cookie and trusts it - it cannot tell it's not the real you. This is session hijacking."
       },
       {
         "heading": "What the session gate checks",
-        "text": "Many API endpoints check: 'Does this request have a valid session cookie?' before doing anything. Without the cookie, they return 401 Unauthorized. You must visit the login server first to receive the cookie before the session gate will let you through."
+        "text": "Many API endpoints check for a valid session cookie before doing anything. Without it, they return <code>401 Unauthorized</code>. Visit the login server first to receive the cookie."
       }
     ],
     "mission": "You carry a POST /login request to 10.50.2.10 on port 443.\n\nRoute through R1 and the HTTPS firewall. Try the bypass path first to see what happens without a cookie. Then visit the login server to receive your session token, and carry it past the session gate to the dashboard."
@@ -40,53 +44,203 @@
     "httpMethod": "POST",
     "httpPath": "/login"
   },
-  "destination": { "nodeId": "node-dest", "label": "user-dashboard" },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "user-dashboard"
+  },
   "nodes": [
-    { "id": "node-spawn",    "type": "spawn",        "col": 1, "row": 3 },
     {
-      "id": "node-r1",       "type": "router",       "col": 3, "row": 3,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 3
+    },
+    {
+      "id": "node-r1",
+      "type": "router",
+      "col": 3,
+      "row": 3,
       "checkpoint": true,
       "label": "R1",
       "routingTable": [
-        { "prefix": "10.50.2.0/24", "nextHop": "node-fw443",  "interface": "eth0" },
-        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead",   "interface": "eth1" }
+        {
+          "prefix": "10.50.2.0/24",
+          "nextHop": "node-fw443",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead",     "type": "exit",         "col": 3, "row": 1, "label": "0.0.0.0/0" },
     {
-      "id": "node-fw443",    "type": "firewall",     "col": 5, "row": 3, "label": "HTTPS FW",
+      "id": "node-dead",
+      "type": "exit",
+      "col": 3,
+      "row": 1,
+      "label": "0.0.0.0/0"
+    },
+    {
+      "id": "node-fw443",
+      "type": "firewall",
+      "col": 5,
+      "row": 3,
+      "label": "HTTPS FW",
       "checkpoint": true,
       "firewallRules": [
-        { "port": 443, "protocol": "*", "action": "allow" },
-        { "port": "*", "protocol": "*", "action": "deny"  }
+        {
+          "port": 443,
+          "protocol": "*",
+          "action": "allow"
+        },
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
-    { "id": "node-bypass",   "type": "exit",         "col": 5, "row": 1, "label": "bypass-path" },
-    { "id": "node-ses-skip", "type": "session-gate", "col": 7, "row": 1, "label": "session-gate" },
-    { "id": "node-login",    "type": "http-node",    "col": 7, "row": 3, "label": "login-server",
-      "setCookie": "session-abc123" },
-    { "id": "node-ses-main", "type": "session-gate", "col": 9, "row": 3, "label": "session-gate", "checkpoint": true },
-    { "id": "node-dest",     "type": "destination",  "col": 11,"row": 3, "label": "user-dashboard" }
+    {
+      "id": "node-bypass",
+      "type": "exit",
+      "col": 5,
+      "row": 1,
+      "label": "bypass-path"
+    },
+    {
+      "id": "node-ses-skip",
+      "type": "session-gate",
+      "col": 7,
+      "row": 1,
+      "label": "session-gate"
+    },
+    {
+      "id": "node-login",
+      "type": "http-node",
+      "col": 7,
+      "row": 3,
+      "label": "login-server",
+      "setCookie": "session-abc123"
+    },
+    {
+      "id": "node-ses-main",
+      "type": "session-gate",
+      "col": 9,
+      "row": 3,
+      "label": "session-gate",
+      "checkpoint": true
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 11,
+      "row": 3,
+      "label": "user-dashboard"
+    }
   ],
   "edges": [
-    { "from": "node-spawn",    "to": "node-r1",       "directed": false, "dropRate": 0 },
-    { "from": "node-r1",       "to": "node-dead",     "directed": false, "dropRate": 0 },
-    { "from": "node-r1",       "to": "node-fw443",    "directed": false, "dropRate": 0 },
-    { "from": "node-fw443",    "to": "node-bypass",   "directed": false, "dropRate": 0 },
-    { "from": "node-bypass",   "to": "node-ses-skip", "directed": false, "dropRate": 0 },
-    { "from": "node-fw443",    "to": "node-login",    "directed": false, "dropRate": 0 },
-    { "from": "node-login",    "to": "node-ses-main", "directed": false, "dropRate": 0 },
-    { "from": "node-ses-main", "to": "node-dest",     "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-dead",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-fw443",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw443",
+      "to": "node-bypass",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-bypass",
+      "to": "node-ses-skip",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw443",
+      "to": "node-login",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-login",
+      "to": "node-ses-main",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-ses-main",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",    "text": "YOU: 10.0.5.5",      "attachToNode": "node-spawn",   "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-dest",   "text": "DEST: 10.50.2.10",   "attachToNode": "node-spawn",   "offsetY": -58, "style": "ip-label"   },
-    { "id": "lbl-method", "text": "POST /login",          "attachToNode": "node-spawn",   "offsetY": -76, "style": "port-label" },
-    { "id": "lbl-fw",     "text": "ALLOWS: port 443",    "attachToNode": "node-fw443",   "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-bypass", "text": "no login →",          "attachToNode": "node-bypass",  "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-cookie", "text": "Set-Cookie: session", "attachToNode": "node-login",   "offsetY": -40, "style": "cidr-label" },
-    { "id": "lbl-ses",    "text": "checks cookie",       "attachToNode": "node-ses-main","offsetY": -40, "style": "rule-text"  }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 10.0.5.5",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: 10.50.2.10",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-method",
+      "text": "POST /login",
+      "attachToNode": "node-spawn",
+      "offsetY": -76,
+      "style": "port-label"
+    },
+    {
+      "id": "lbl-fw",
+      "text": "ALLOWS: port 443",
+      "attachToNode": "node-fw443",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-bypass",
+      "text": "no login →",
+      "attachToNode": "node-bypass",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-cookie",
+      "text": "Set-Cookie: session",
+      "attachToNode": "node-login",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-ses",
+      "text": "checks cookie",
+      "attachToNode": "node-ses-main",
+      "offsetY": -40,
+      "style": "rule-text"
+    }
   ],
   "termIntroductions": [
     {
@@ -120,5 +274,12 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-r1", "node-fw443", "node-login", "node-ses-main", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-r1",
+    "node-fw443",
+    "node-login",
+    "node-ses-main",
+    "node-dest"
+  ]
 }

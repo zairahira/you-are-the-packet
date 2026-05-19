@@ -4,7 +4,10 @@
   "concept": "dhcp",
   "theory": {
     "title": "DHCP: Joining the Network",
-    "buildsOn": ["routing-table", "longest-prefix-match"],
+    "buildsOn": [
+      "routing-table",
+      "longest-prefix-match"
+    ],
     "recap": "You can read routing tables and pick the most specific route. But routers can't forward a packet that has no source address. Before you route, you need an IP - and DHCP is how every real device gets one.",
     "newConcept": "dhcp",
     "plainObjective": "Get an IP from the DHCP server, then route across two routers to reach the server. Each router still uses longest-prefix match.",
@@ -12,15 +15,15 @@
     "bodyParagraphs": [
       {
         "heading": "You have no address",
-        "text": "When a device first connects to a network, it has no IP. It cannot send routed traffic until one is assigned. Typing a static IP works but does not scale to thousands of devices. DHCP automates the process."
+        "text": "When a device first connects, it has no IP and cannot send routed traffic. Typing a static IP works but doesn't scale. DHCP automates assignment for every device on the network."
       },
       {
         "heading": "What DHCP assigns",
-        "text": "A DHCP server holds a pool of available addresses called a scope. When a new device appears, the server offers an address from the pool along with the subnet mask, default gateway, and DNS server. Four things, one exchange."
+        "text": "A DHCP server holds a pool of available addresses. When a new device appears, the server provides four things:<ul><li>IP address</li><li>Subnet mask</li><li>Default gateway</li><li>DNS server</li></ul>"
       },
       {
         "heading": "The DORA exchange",
-        "text": "The full process is four messages: Discover (client broadcasts 'is there a DHCP server?'), Offer (server replies with an available address), Request (client formally asks for it), Acknowledge (server confirms the lease). All four happen in milliseconds when you join a Wi-Fi network."
+        "text": "The full process is four messages:<ul><li><code>Discover</code> - client broadcasts \"is there a DHCP server?\"</li><li><code>Offer</code> - server replies with an available address</li><li><code>Request</code> - client formally asks for it</li><li><code>Acknowledge</code> - server confirms the lease</li></ul>All four happen in milliseconds when you join Wi-Fi."
       },
       {
         "heading": "Leases, not ownership",
@@ -28,7 +31,7 @@
       },
       {
         "heading": "After DHCP - back to routing",
-        "text": "Once you have an IP, routers will accept you. R1 here has two routes; R2 has two more. Both still use longest-prefix match. The packet's life always loops back to the routing fundamentals from Act I."
+        "text": "Once you have an IP, routers will accept you. R1 and R2 both still use longest-prefix match."
       }
     ],
     "mission": "You have no source IP - routers will refuse you. Visit the DHCP server first to claim 192.168.2.100, then route through R1 and R2 to reach 10.50.1.20.\n\nAt R1 and R2 the most specific prefix wins, just like in The Subnet Maze."
@@ -43,57 +46,172 @@
     "portTag": null,
     "domainName": null
   },
-  "destination": { "nodeId": "node-dest", "label": "app-server" },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "app-server"
+  },
   "nodes": [
-    { "id": "node-spawn", "type": "spawn",       "col": 1,  "row": 4 },
-    { "id": "node-jct",   "type": "exit",         "col": 3,  "row": 4 },
     {
-      "id": "node-dhcp",  "type": "dhcp-server",  "col": 3,  "row": 2,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 4
+    },
+    {
+      "id": "node-jct",
+      "type": "exit",
+      "col": 3,
+      "row": 4
+    },
+    {
+      "id": "node-dhcp",
+      "type": "dhcp-server",
+      "col": 3,
+      "row": 2,
       "checkpoint": true,
       "dhcpConfig": {
-        "assignedIP":  "192.168.2.100",
-        "subnetMask":  "255.255.255.0",
-        "gateway":     "192.168.2.1",
-        "dnsServer":   "8.8.8.8"
+        "assignedIP": "192.168.2.100",
+        "subnetMask": "255.255.255.0",
+        "gateway": "192.168.2.1",
+        "dnsServer": "8.8.8.8"
       }
     },
     {
-      "id": "node-r1",    "type": "router",        "col": 6,  "row": 4,
+      "id": "node-r1",
+      "type": "router",
+      "col": 6,
+      "row": 4,
       "label": "R1",
       "checkpoint": true,
       "routingTable": [
-        { "prefix": "10.50.0.0/16", "nextHop": "node-r2",     "interface": "eth0" },
-        { "prefix": "0.0.0.0/0",    "nextHop": "node-dead1",  "interface": "eth1" }
+        {
+          "prefix": "10.50.0.0/16",
+          "nextHop": "node-r2",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "0.0.0.0/0",
+          "nextHop": "node-dead1",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead1", "type": "exit",          "col": 6,  "row": 6, "label": "0.0.0.0/0" },
     {
-      "id": "node-r2",    "type": "router",        "col": 9,  "row": 4,
+      "id": "node-dead1",
+      "type": "exit",
+      "col": 6,
+      "row": 6,
+      "label": "0.0.0.0/0"
+    },
+    {
+      "id": "node-r2",
+      "type": "router",
+      "col": 9,
+      "row": 4,
       "label": "R2",
       "checkpoint": true,
       "routingTable": [
-        { "prefix": "10.50.1.0/24", "nextHop": "node-dest",   "interface": "eth0" },
-        { "prefix": "10.50.2.0/24", "nextHop": "node-dead2",  "interface": "eth1" }
+        {
+          "prefix": "10.50.1.0/24",
+          "nextHop": "node-dest",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "10.50.2.0/24",
+          "nextHop": "node-dead2",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead2", "type": "exit",          "col": 9,  "row": 6, "label": "10.50.2.0/24" },
-    { "id": "node-dest",  "type": "destination",   "col": 12, "row": 4, "label": "app-server" }
+    {
+      "id": "node-dead2",
+      "type": "exit",
+      "col": 9,
+      "row": 6,
+      "label": "10.50.2.0/24"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 12,
+      "row": 4,
+      "label": "app-server"
+    }
   ],
   "edges": [
-    { "from": "node-spawn", "to": "node-jct",   "directed": false, "dropRate": 0 },
-    { "from": "node-jct",   "to": "node-dhcp",  "directed": false, "dropRate": 0 },
-    { "from": "node-jct",   "to": "node-r1",    "directed": false, "dropRate": 0 },
-    { "from": "node-r1",    "to": "node-dead1", "directed": false, "dropRate": 0 },
-    { "from": "node-r1",    "to": "node-r2",    "directed": false, "dropRate": 0 },
-    { "from": "node-r2",    "to": "node-dead2", "directed": false, "dropRate": 0 },
-    { "from": "node-r2",    "to": "node-dest",  "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-jct",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-jct",
+      "to": "node-dhcp",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-jct",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-dead1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-r2",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r2",
+      "to": "node-dead2",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r2",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",    "text": "YOU: (no IP)",           "attachToNode": "node-spawn", "offsetY": -40, "style": "ip-label"    },
-    { "id": "lbl-dest",   "text": "DEST: 10.50.1.20",       "attachToNode": "node-spawn", "offsetY": -58, "style": "ip-label"    },
-    { "id": "lbl-dhcp",   "text": "DHCP SERVER",            "attachToNode": "node-dhcp",  "offsetY": -40, "style": "cidr-label"  },
-    { "id": "lbl-assign", "text": "assigns: 192.168.2.100", "attachToNode": "node-dhcp",  "offsetY": -58, "style": "routing-entry"}
+    {
+      "id": "lbl-src",
+      "text": "YOU: (no IP)",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: 10.50.1.20",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dhcp",
+      "text": "DHCP SERVER",
+      "attachToNode": "node-dhcp",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-assign",
+      "text": "assigns: 192.168.2.100",
+      "attachToNode": "node-dhcp",
+      "offsetY": -58,
+      "style": "routing-entry"
+    }
   ],
   "termIntroductions": [
     {
@@ -120,5 +238,13 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-jct", "node-dhcp", "node-jct", "node-r1", "node-r2", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-jct",
+    "node-dhcp",
+    "node-jct",
+    "node-r1",
+    "node-r2",
+    "node-dest"
+  ]
 }

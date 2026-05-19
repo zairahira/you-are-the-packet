@@ -4,7 +4,10 @@
   "concept": "packet-loss",
   "theory": {
     "title": "When Packets Get Lost",
-    "buildsOn": ["routing-table", "firewall"],
+    "buildsOn": [
+      "routing-table",
+      "firewall"
+    ],
     "recap": "You can route by destination and read firewall rules. This level layers both on top of a new idea: some links silently drop every packet. You'll see all three failure modes at once - a routed path, a firewall-denied path, and a lossy link.",
     "newConcept": "packet-loss",
     "plainObjective": "Route to the junction, then identify the path that is both port-allowed and link-stable. Avoid the firewall-denied path and the lossy link.",
@@ -12,19 +15,19 @@
     "bodyParagraphs": [
       {
         "heading": "Networks drop packets",
-        "text": "IP makes no delivery guarantees. Routers drop packets when links are congested, faulty, or overloaded. A dropped packet simply disappears - no error, no notification. The sending application must detect the loss and retransmit."
+        "text": "IP makes no delivery guarantees. Routers drop packets when links are congested or overloaded. A dropped packet disappears silently - no error, no notification. The sending application must detect the loss and retransmit."
       },
       {
         "heading": "Drop rate",
-        "text": "Every link has a drop rate: the fraction of packets it silently discards. A link with a 100% drop rate drops every packet. Unstable links glow red on the canvas. Avoid them."
+        "text": "Every link has a drop rate - the fraction of packets it silently discards. A 100% drop rate means no packets get through. Unstable links glow red on the canvas. Avoid them."
       },
       {
         "heading": "Three ways to fail",
-        "text": "A path can fail because a router refuses to forward (wrong prefix), because a firewall denies your port, or because the link drops the packet. All three look like 'didn't get through' from outside - but the cause and fix are very different."
+        "text": "A path can fail three ways:<ul><li>Router refuses to forward (wrong prefix match)</li><li>Firewall denies your port</li><li>Link drops the packet silently</li></ul>All three look like \"didn't get through\" from outside, but the cause and fix differ."
       },
       {
         "heading": "Redundancy",
-        "text": "Real networks build multiple paths between the same endpoints. If one link fails, traffic reroutes automatically. This is why the internet keeps working even when parts of it break. Find the stable, allowed path and deliver your packet."
+        "text": "Real networks build multiple paths between the same endpoints. If one link fails, traffic reroutes automatically. Find the stable, allowed path and deliver your packet."
       }
     ],
     "mission": "You carry port 80, destined for 10.0.2.50. R1 routes you to a junction with three exits.\n\nOne exit hits a firewall that only allows port 22. Another crosses a link that drops every packet. The third is the stable, allowed path."
@@ -39,49 +42,193 @@
     "portTag": 80,
     "domainName": null
   },
-  "destination": { "nodeId": "node-dest", "label": "10.0.2.50" },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "10.0.2.50"
+  },
   "nodes": [
-    { "id": "node-spawn", "type": "spawn",       "col": 1, "row": 4 },
     {
-      "id": "node-r1",    "type": "router",      "col": 3, "row": 4,
-      "label": "R1", "checkpoint": true,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 4
+    },
+    {
+      "id": "node-r1",
+      "type": "router",
+      "col": 3,
+      "row": 4,
+      "label": "R1",
+      "checkpoint": true,
       "routingTable": [
-        { "prefix": "10.0.2.0/24", "nextHop": "node-chk",     "interface": "eth0" },
-        { "prefix": "10.0.0.0/16", "nextHop": "node-dead-16", "interface": "eth1" }
+        {
+          "prefix": "10.0.2.0/24",
+          "nextHop": "node-chk",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "10.0.0.0/16",
+          "nextHop": "node-dead-16",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead-16", "type": "exit",        "col": 3, "row": 6, "label": "10.0.0.0/16" },
-    { "id": "node-chk",     "type": "exit",        "col": 5, "row": 4, "checkpoint": true },
     {
-      "id": "node-fw-ssh",  "type": "firewall",    "col": 5, "row": 2, "label": "FW :22",
+      "id": "node-dead-16",
+      "type": "exit",
+      "col": 3,
+      "row": 6,
+      "label": "10.0.0.0/16"
+    },
+    {
+      "id": "node-chk",
+      "type": "exit",
+      "col": 5,
+      "row": 4,
+      "checkpoint": true
+    },
+    {
+      "id": "node-fw-ssh",
+      "type": "firewall",
+      "col": 5,
+      "row": 2,
+      "label": "FW :22",
       "firewallRules": [
-        { "port": 22,  "protocol": "*", "action": "allow" },
-        { "port": "*", "protocol": "*", "action": "deny"  }
+        {
+          "port": 22,
+          "protocol": "*",
+          "action": "allow"
+        },
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
-    { "id": "node-fw-exit", "type": "exit",        "col": 7, "row": 2, "label": "(blocked)" },
-    { "id": "node-mid",     "type": "exit",        "col": 7, "row": 4, "label": "STABLE" },
-    { "id": "node-dead",    "type": "exit",        "col": 5, "row": 6, "label": "DROPPED" },
-    { "id": "node-dest",    "type": "destination", "col": 9, "row": 4, "label": "10.0.2.50" }
+    {
+      "id": "node-fw-exit",
+      "type": "exit",
+      "col": 7,
+      "row": 2,
+      "label": "(blocked)"
+    },
+    {
+      "id": "node-mid",
+      "type": "exit",
+      "col": 7,
+      "row": 4,
+      "label": "STABLE"
+    },
+    {
+      "id": "node-dead",
+      "type": "exit",
+      "col": 5,
+      "row": 6,
+      "label": "DROPPED"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 9,
+      "row": 4,
+      "label": "10.0.2.50"
+    }
   ],
   "edges": [
-    { "from": "node-spawn", "to": "node-r1",       "directed": false, "dropRate": 0 },
-    { "from": "node-r1",    "to": "node-chk",      "directed": false, "dropRate": 0 },
-    { "from": "node-r1",    "to": "node-dead-16",  "directed": false, "dropRate": 0 },
-    { "from": "node-chk",   "to": "node-fw-ssh",   "directed": false, "dropRate": 0 },
-    { "from": "node-fw-ssh","to": "node-fw-exit",  "directed": false, "dropRate": 0 },
-    { "from": "node-chk",   "to": "node-mid",      "directed": false, "dropRate": 0 },
-    { "from": "node-mid",   "to": "node-dest",     "directed": false, "dropRate": 0 },
-    { "from": "node-chk",   "to": "node-dead",     "directed": false, "dropRate": 1 }
+    {
+      "from": "node-spawn",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-chk",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-dead-16",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-chk",
+      "to": "node-fw-ssh",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw-ssh",
+      "to": "node-fw-exit",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-chk",
+      "to": "node-mid",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-mid",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-chk",
+      "to": "node-dead",
+      "directed": false,
+      "dropRate": 1
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",    "text": "YOU: 10.0.1.5",   "attachToNode": "node-spawn",  "offsetY": -40, "style": "ip-label"  },
-    { "id": "lbl-port",   "text": "PORT: 80",         "attachToNode": "node-spawn",  "offsetY": -58, "style": "port-label"},
-    { "id": "lbl-dest",   "text": "DEST: 10.0.2.50", "attachToNode": "node-dest",   "offsetY": -40, "style": "ip-label"  },
-    { "id": "lbl-fw",     "text": "ALLOWS: 22",       "attachToNode": "node-fw-ssh", "offsetY": -40, "style": "rule-text" },
-    { "id": "lbl-stable", "text": "STABLE",           "attachToNode": "node-mid",    "offsetY": -40, "style": "cidr-label"},
-    { "id": "lbl-drop",   "text": "DROPPED",          "attachToNode": "node-dead",   "offsetY": -40, "style": "rule-text" }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 10.0.1.5",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-port",
+      "text": "PORT: 80",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "port-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: 10.0.2.50",
+      "attachToNode": "node-dest",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-fw",
+      "text": "ALLOWS: 22",
+      "attachToNode": "node-fw-ssh",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-stable",
+      "text": "STABLE",
+      "attachToNode": "node-mid",
+      "offsetY": -40,
+      "style": "cidr-label"
+    },
+    {
+      "id": "lbl-drop",
+      "text": "DROPPED",
+      "attachToNode": "node-dead",
+      "offsetY": -40,
+      "style": "rule-text"
+    }
   ],
   "termIntroductions": [
     {
@@ -101,5 +248,11 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-r1", "node-chk", "node-mid", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-r1",
+    "node-chk",
+    "node-mid",
+    "node-dest"
+  ]
 }

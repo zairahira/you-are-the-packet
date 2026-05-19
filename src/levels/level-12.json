@@ -4,7 +4,11 @@
   "concept": "tls",
   "theory": {
     "title": "TLS: The Encrypted Envelope",
-    "buildsOn": ["routing-table", "firewall", "tcp-handshake"],
+    "buildsOn": [
+      "routing-table",
+      "firewall",
+      "tcp-handshake"
+    ],
     "recap": "You can route, filter, and complete a TCP handshake. TLS is what the browser layers on top of TCP every time you see a padlock. The TCP handshake still happens first - then a second handshake negotiates encryption and verifies the server's identity through its certificate.",
     "newConcept": "tls",
     "plainObjective": "Route to the HTTPS firewall, complete the TCP handshake, then complete the TLS handshake. The certificate step decides whether you trust the server.",
@@ -12,23 +16,23 @@
     "bodyParagraphs": [
       {
         "heading": "Why not just TCP?",
-        "text": "TCP delivers your packet reliably, but anyone on the path can read it. Every router, ISP, and network tap between you and the server sees plain text. TLS (Transport Layer Security) wraps the data in encryption so only the intended server - the one with the right private key - can read it."
+        "text": "TCP delivers reliably, but anyone on the path can read the data. TLS wraps it in encryption so only the intended server can read it."
       },
       {
         "heading": "TCP first, then TLS",
-        "text": "TLS doesn't replace TCP - it sits on top. You still complete the three-way handshake (SYN, SYN-ACK, ACK) before TLS begins. Only over an ESTABLISHED TCP connection does the TLS handshake start. Two handshakes, one connection."
+        "text": "TLS doesn't replace TCP - it sits on top. Complete the three-way handshake first (<code>SYN</code>, <code>SYN-ACK</code>, <code>ACK</code>), then the TLS handshake begins over the established connection."
       },
       {
         "heading": "The TLS handshake",
-        "text": "Step 1: ClientHello - the client lists supported cipher suites and a random value. Step 2: ServerHello + Certificate - the server picks a cipher and proves its identity with a signed certificate. Step 3: ChangeCipherSpec - both sides derive matching session keys and confirm encryption is active."
+        "text": "The TLS handshake in three steps:<ul><li><code>ClientHello</code> - client lists supported cipher suites and a random value</li><li><code>ServerHello + Certificate</code> - server picks a cipher and proves its identity</li><li><code>ChangeCipherSpec</code> - both sides derive matching session keys and confirm encryption is active</li></ul>"
       },
       {
         "heading": "Certificates and trust",
-        "text": "The certificate is the heart of TLS. A real CA signs the cert; your device trusts only certificates with valid signatures, matching domain names, and unexpired dates. Three certificate options sit ahead of you - one valid, one expired, one for the wrong domain. Pick the wrong one and the handshake aborts."
+        "text": "The certificate proves the server's identity. A CA signs the cert; your device checks that the signature is valid, the domain name matches, and the cert hasn't expired. A wrong cert aborts the handshake."
       },
       {
         "heading": "HTTPS = HTTP + TLS",
-        "text": "Port 80 sends HTTP as plain text. Port 443 wraps the same HTTP inside TLS. The application code does not change - only the transport layer differs. The port number signals to both sides that TLS must complete before any application data is exchanged."
+        "text": "Port <code>80</code> sends HTTP as plain text. Port <code>443</code> wraps the same HTTP inside TLS. The port number signals that TLS must complete before any application data is exchanged."
       }
     ],
     "mission": "You carry port 443, destined for 10.40.1.10.\n\nRoute through R1, pass the HTTPS firewall, complete the TCP handshake, then begin TLS at ClientHello. Three certificates wait - two are invalid. Choose the valid one to reach ChangeCipherSpec and the secure server."
@@ -44,67 +48,286 @@
     "tlsState": "TLS_IDLE",
     "domainName": null
   },
-  "destination": { "nodeId": "node-dest", "label": "secure-server", "requiresTlsState": "TLS_ESTABLISHED" },
+  "destination": {
+    "nodeId": "node-dest",
+    "label": "secure-server",
+    "requiresTlsState": "TLS_ESTABLISHED"
+  },
   "nodes": [
-    { "id": "node-spawn", "type": "spawn",       "col": 1, "row": 4 },
     {
-      "id": "node-r1",    "type": "router",      "col": 2, "row": 4,
+      "id": "node-spawn",
+      "type": "spawn",
+      "col": 1,
+      "row": 4
+    },
+    {
+      "id": "node-r1",
+      "type": "router",
+      "col": 2,
+      "row": 4,
       "checkpoint": true,
       "label": "R1",
       "routingTable": [
-        { "prefix": "10.40.1.0/24", "nextHop": "node-fw443",   "interface": "eth0" },
-        { "prefix": "10.0.0.0/8",   "nextHop": "node-dead-8",  "interface": "eth1" }
+        {
+          "prefix": "10.40.1.0/24",
+          "nextHop": "node-fw443",
+          "interface": "eth0"
+        },
+        {
+          "prefix": "10.0.0.0/8",
+          "nextHop": "node-dead-8",
+          "interface": "eth1"
+        }
       ]
     },
-    { "id": "node-dead-8", "type": "exit",      "col": 2, "row": 6, "label": "10.0.0.0/8" },
     {
-      "id": "node-fw443", "type": "firewall",   "col": 4, "row": 4, "label": "HTTPS",
+      "id": "node-dead-8",
+      "type": "exit",
+      "col": 2,
+      "row": 6,
+      "label": "10.0.0.0/8"
+    },
+    {
+      "id": "node-fw443",
+      "type": "firewall",
+      "col": 4,
+      "row": 4,
+      "label": "HTTPS",
       "firewallRules": [
-        { "port": 443, "protocol": "*", "action": "allow" },
-        { "port": "*", "protocol": "*", "action": "deny"  }
+        {
+          "port": 443,
+          "protocol": "*",
+          "action": "allow"
+        },
+        {
+          "port": "*",
+          "protocol": "*",
+          "action": "deny"
+        }
       ]
     },
-    { "id": "node-tcp-syn",    "type": "tcp-node",    "col": 6,  "row": 4, "checkpoint": true, "tcpStep": "syn",     "label": "TCP SYN" },
-    { "id": "node-tcp-skip",   "type": "tcp-node",    "col": 6,  "row": 2, "tcpStep": "ack",     "label": "skip TCP?" },
-    { "id": "node-tcp-synack", "type": "tcp-node",    "col": 7,  "row": 4, "tcpStep": "syn-ack", "label": "TCP SYN-ACK" },
-    { "id": "node-tcp-ack",    "type": "tcp-node",    "col": 9,  "row": 4, "checkpoint": true, "tcpStep": "ack",     "label": "TCP ACK" },
-    { "id": "node-ch",         "type": "tls-node",    "col": 10, "row": 4, "checkpoint": true, "tlsStep": "client-hello", "label": "1. ClientHello" },
-    { "id": "node-cert-expired", "type": "exit",      "col": 10, "row": 2, "label": "CERT EXPIRED" },
-    { "id": "node-cert-wrong",   "type": "exit",      "col": 10, "row": 6, "label": "WRONG DOMAIN" },
-    { "id": "node-sc",         "type": "tls-node",    "col": 12, "row": 4, "tlsStep": "server-cert", "label": "2. Valid Cert" },
-    { "id": "node-cs",         "type": "tls-node",    "col": 14, "row": 4, "checkpoint": true, "tlsStep": "change-cipher", "label": "3. ChangeCipherSpec" },
     {
-      "id": "node-dest", "type": "destination", "col": 16, "row": 4,
+      "id": "node-tcp-syn",
+      "type": "tcp-node",
+      "col": 6,
+      "row": 4,
+      "checkpoint": true,
+      "tcpStep": "syn",
+      "label": "TCP SYN"
+    },
+    {
+      "id": "node-tcp-skip",
+      "type": "tcp-node",
+      "col": 6,
+      "row": 2,
+      "tcpStep": "ack",
+      "label": "skip TCP?"
+    },
+    {
+      "id": "node-tcp-synack",
+      "type": "tcp-node",
+      "col": 7,
+      "row": 4,
+      "tcpStep": "syn-ack",
+      "label": "TCP SYN-ACK"
+    },
+    {
+      "id": "node-tcp-ack",
+      "type": "tcp-node",
+      "col": 9,
+      "row": 4,
+      "checkpoint": true,
+      "tcpStep": "ack",
+      "label": "TCP ACK"
+    },
+    {
+      "id": "node-ch",
+      "type": "tls-node",
+      "col": 10,
+      "row": 4,
+      "checkpoint": true,
+      "tlsStep": "client-hello",
+      "label": "1. ClientHello"
+    },
+    {
+      "id": "node-cert-expired",
+      "type": "exit",
+      "col": 10,
+      "row": 2,
+      "label": "CERT EXPIRED"
+    },
+    {
+      "id": "node-cert-wrong",
+      "type": "exit",
+      "col": 10,
+      "row": 6,
+      "label": "WRONG DOMAIN"
+    },
+    {
+      "id": "node-sc",
+      "type": "tls-node",
+      "col": 12,
+      "row": 4,
+      "tlsStep": "server-cert",
+      "label": "2. Valid Cert"
+    },
+    {
+      "id": "node-cs",
+      "type": "tls-node",
+      "col": 14,
+      "row": 4,
+      "checkpoint": true,
+      "tlsStep": "change-cipher",
+      "label": "3. ChangeCipherSpec"
+    },
+    {
+      "id": "node-dest",
+      "type": "destination",
+      "col": 16,
+      "row": 4,
       "label": "secure-server",
       "requiresTcpState": "ESTABLISHED",
       "requiresTlsState": "TLS_ESTABLISHED"
     }
   ],
   "edges": [
-    { "from": "node-spawn",      "to": "node-r1",          "directed": false, "dropRate": 0 },
-    { "from": "node-r1",         "to": "node-fw443",       "directed": false, "dropRate": 0 },
-    { "from": "node-r1",         "to": "node-dead-8",      "directed": false, "dropRate": 0 },
-    { "from": "node-fw443",      "to": "node-tcp-syn",     "directed": false, "dropRate": 0 },
-    { "from": "node-tcp-syn",    "to": "node-tcp-skip",    "directed": false, "dropRate": 0 },
-    { "from": "node-tcp-syn",    "to": "node-tcp-synack",  "directed": false, "dropRate": 0 },
-    { "from": "node-tcp-synack", "to": "node-tcp-ack",     "directed": false, "dropRate": 0 },
-    { "from": "node-tcp-ack",    "to": "node-ch",          "directed": false, "dropRate": 0 },
-    { "from": "node-ch",         "to": "node-cert-expired","directed": false, "dropRate": 0 },
-    { "from": "node-ch",         "to": "node-cert-wrong",  "directed": false, "dropRate": 0 },
-    { "from": "node-ch",         "to": "node-sc",          "directed": false, "dropRate": 0 },
-    { "from": "node-sc",         "to": "node-cs",          "directed": false, "dropRate": 0 },
-    { "from": "node-cs",         "to": "node-dest",        "directed": false, "dropRate": 0 }
+    {
+      "from": "node-spawn",
+      "to": "node-r1",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-fw443",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-r1",
+      "to": "node-dead-8",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-fw443",
+      "to": "node-tcp-syn",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-tcp-syn",
+      "to": "node-tcp-skip",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-tcp-syn",
+      "to": "node-tcp-synack",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-tcp-synack",
+      "to": "node-tcp-ack",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-tcp-ack",
+      "to": "node-ch",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-ch",
+      "to": "node-cert-expired",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-ch",
+      "to": "node-cert-wrong",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-ch",
+      "to": "node-sc",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-sc",
+      "to": "node-cs",
+      "directed": false,
+      "dropRate": 0
+    },
+    {
+      "from": "node-cs",
+      "to": "node-dest",
+      "directed": false,
+      "dropRate": 0
+    }
   ],
   "firewallRules": [],
   "labels": [
-    { "id": "lbl-src",   "text": "YOU: 10.0.5.5",       "attachToNode": "node-spawn",        "offsetY": -40, "style": "ip-label"   },
-    { "id": "lbl-dest",  "text": "DEST: 10.40.1.10",    "attachToNode": "node-spawn",        "offsetY": -58, "style": "ip-label"   },
-    { "id": "lbl-port",  "text": "PORT: 443 (HTTPS)",   "attachToNode": "node-spawn",        "offsetY": -76, "style": "port-label" },
-    { "id": "lbl-fw",    "text": "ALLOWS: 443",         "attachToNode": "node-fw443",        "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-skip",  "text": "SKIP TCP-ACK?",       "attachToNode": "node-tcp-skip",     "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-cexp",  "text": "expires 2019",        "attachToNode": "node-cert-expired", "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-cwrong","text": "for wrong.example",   "attachToNode": "node-cert-wrong",   "offsetY": -40, "style": "rule-text"  },
-    { "id": "lbl-cgood", "text": "signed by trusted CA","attachToNode": "node-sc",           "offsetY": -40, "style": "cidr-label" }
+    {
+      "id": "lbl-src",
+      "text": "YOU: 10.0.5.5",
+      "attachToNode": "node-spawn",
+      "offsetY": -40,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-dest",
+      "text": "DEST: 10.40.1.10",
+      "attachToNode": "node-spawn",
+      "offsetY": -58,
+      "style": "ip-label"
+    },
+    {
+      "id": "lbl-port",
+      "text": "PORT: 443 (HTTPS)",
+      "attachToNode": "node-spawn",
+      "offsetY": -76,
+      "style": "port-label"
+    },
+    {
+      "id": "lbl-fw",
+      "text": "ALLOWS: 443",
+      "attachToNode": "node-fw443",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-skip",
+      "text": "SKIP TCP-ACK?",
+      "attachToNode": "node-tcp-skip",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-cexp",
+      "text": "expires 2019",
+      "attachToNode": "node-cert-expired",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-cwrong",
+      "text": "for wrong.example",
+      "attachToNode": "node-cert-wrong",
+      "offsetY": -40,
+      "style": "rule-text"
+    },
+    {
+      "id": "lbl-cgood",
+      "text": "signed by trusted CA",
+      "attachToNode": "node-sc",
+      "offsetY": -40,
+      "style": "cidr-label"
+    }
   ],
   "termIntroductions": [
     {
@@ -152,5 +375,16 @@
   ],
   "checkpointBehavior": "last-checkpoint",
   "completionCondition": "reach-destination",
-  "correctPath": ["node-spawn", "node-r1", "node-fw443", "node-tcp-syn", "node-tcp-synack", "node-tcp-ack", "node-ch", "node-sc", "node-cs", "node-dest"]
+  "correctPath": [
+    "node-spawn",
+    "node-r1",
+    "node-fw443",
+    "node-tcp-syn",
+    "node-tcp-synack",
+    "node-tcp-ack",
+    "node-ch",
+    "node-sc",
+    "node-cs",
+    "node-dest"
+  ]
 }
