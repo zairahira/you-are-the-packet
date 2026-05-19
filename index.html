@@ -801,9 +801,151 @@
 
     .btn-ghost:hover        { border-color: #dbb8ff; color: #dbb8ff; }
     .btn-ghost:focus-visible { outline: 2px solid #198eee; outline-offset: 2px; }
+
+    /* ── Landing / Onboarding ── */
+    #screen-landing {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: #0a0a23;
+      z-index: 10;
+    }
+    #landing-scroller {
+      height: 100%;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    #landing-scroller::-webkit-scrollbar { display: none; }
+
+    .l-slide {
+      height: 100vh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+    }
+    .l-slide + .l-slide { border-top: 1px solid #3b3b4f; }
+
+    .l-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      max-width: 700px;
+      width: 100%;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+    .l-content.is-visible { opacity: 1; transform: translateY(0); }
+
+    .l-title {
+      font-size: clamp(2rem, 7vw, 4.5rem);
+      color: #dbb8ff;
+      letter-spacing: 0.06em;
+      line-height: 1.15;
+      margin: 0;
+      font-family: inherit;
+      font-weight: bold;
+    }
+    .l-sub { font-size: clamp(1rem, 2.5vw, 1.35rem); color: #858591; margin: 0; }
+    .l-hint {
+      font-size: 0.8rem; color: #3b3b4f; letter-spacing: 0.14em; margin-top: 8px;
+      animation: l-hint-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes l-hint-pulse {
+      0%, 100% { color: #3b3b4f; }
+      50%       { color: #858591; }
+    }
+    .l-body { font-size: clamp(1rem, 2.5vw, 1.3rem); color: #f5f6f7; line-height: 1.6; margin: 0; }
+    .l-body--accent { color: #99c9ff; margin-top: 12px; }
+    .l-stats {
+      font-size: clamp(0.8rem, 1.8vw, 1rem);
+      color: #858591; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 8px;
+    }
+    .l-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 560px; }
+    .l-pill {
+      font-size: clamp(0.72rem, 1.5vw, 0.88rem);
+      color: #99c9ff;
+      background: rgba(153, 201, 255, 0.10);
+      border: 1px solid rgba(153, 201, 255, 0.35);
+      padding: 6px 14px; letter-spacing: 0.06em; white-space: nowrap;
+    }
+    .l-tagline { font-size: clamp(1rem, 2.5vw, 1.4rem); color: #dbb8ff; line-height: 1.5; margin: 0; margin-top: 8px; }
+    .l-cta-lead { font-size: clamp(1rem, 2.5vw, 1.4rem); color: #858591; margin: 0; letter-spacing: 0.06em; }
+    .l-begin-btn { padding: 18px 60px; letter-spacing: 0.12em; font-size: 1.1rem; }
+    .l-begin-btn:focus-visible { outline: 2px solid #198eee; outline-offset: 2px; }
+
+    @media (max-width: 500px) {
+      .l-slide { padding: 32px 16px; }
+      .l-title  { font-size: 2rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .l-content { transition: none; opacity: 1; transform: none; }
+    }
   </style>
 </head>
 <body>
+
+  <!-- Landing / onboarding screen -->
+  <div id="screen-landing" aria-label="Introduction">
+    <div id="landing-scroller">
+
+      <section class="l-slide" id="l-slide-1">
+        <div class="l-content">
+          <h1 class="l-title">YOU ARE THE PACKET.</h1>
+          <p class="l-sub">A data packet somewhere on the internet.</p>
+          <p class="l-hint" aria-hidden="true">scroll to continue &darr;</p>
+        </div>
+      </section>
+
+      <section class="l-slide" id="l-slide-2">
+        <div class="l-content">
+          <p class="l-body">Every message, every click, every video</p>
+          <p class="l-body">travels as a packet across dozens of machines.</p>
+          <p class="l-body l-body--accent">This course puts you inside that journey.</p>
+        </div>
+      </section>
+
+      <section class="l-slide" id="l-slide-3">
+        <div class="l-content">
+          <p class="l-body">Navigate real network topology.</p>
+          <p class="l-body">Read routing tables. Avoid firewalls. Cross the internet.</p>
+          <p class="l-stats">22 levels &mdash; 7 acts &mdash; real networking concepts</p>
+        </div>
+      </section>
+
+      <section class="l-slide" id="l-slide-4">
+        <div class="l-content">
+          <div class="l-pills">
+            <span class="l-pill">IP Addresses</span>
+            <span class="l-pill">Routing Tables</span>
+            <span class="l-pill">DNS</span>
+            <span class="l-pill">TCP</span>
+            <span class="l-pill">Firewalls</span>
+            <span class="l-pill">NAT</span>
+            <span class="l-pill">TLS</span>
+            <span class="l-pill">BGP</span>
+            <span class="l-pill">DNSSEC</span>
+          </div>
+          <p class="l-tagline">The internet is not magic.<br>It's just very fast plumbing.</p>
+        </div>
+      </section>
+
+      <section class="l-slide" id="l-slide-5">
+        <div class="l-content">
+          <p class="l-cta-lead">Ready to travel?</p>
+          <button class="btn-primary l-begin-btn" id="btn-begin">BEGIN</button>
+        </div>
+      </section>
+
+    </div>
+  </div>
 
   <!-- Menu screen -->
   <div id="screen-menu"></div>
