@@ -98,7 +98,7 @@ export function mountMenu(container, onSelect) {
     <p class="menu-sub">Navigate the network. Deliver the message.</p>
     <div id="acts-wrap"></div>
     <p class="menu-footer">Use arrow keys to navigate your packet</p>
-    <p class="menu-footer"><a href="https://www.freecodecamp.org/donate" target="_blank" rel="noopener" style="color:#4a4a6a;text-decoration:none;" onmouseover="this.style.color='#858591'" onmouseout="this.style.color='#4a4a6a'">&#9829; Support freeCodeCamp</a></p>
+    <p class="menu-footer"><a href="https://www.freecodecamp.org/donate" target="_blank" rel="noopener" class="menu-donate">&#9829; Support freeCodeCamp</a></p>
   `
 
   const wrap = container.querySelector('#acts-wrap')

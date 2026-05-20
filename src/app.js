@@ -3,12 +3,12 @@ import { initGame, startLevel, stopGame } from './screens/game.js'
 import { mountLanding, unmountLanding, shouldSkipLanding } from './screens/landing.js'
 
 window.onerror = (msg, src, line, col, err) => {
-  document.body.style.background = '#0a0a23'
-  document.body.innerHTML = `<pre style="color:#ffadad;font-family:monospace;padding:24px;white-space:pre-wrap">[ERROR]\n${msg}\n${src}:${line}\n${err?.stack || ''}</pre>`
+  document.body.style.cssText = 'background:var(--bg-deep);color:var(--accent-red);font-family:monospace;padding:24px'
+  document.body.innerHTML = `<pre style="white-space:pre-wrap;color:inherit;font-family:inherit">[ERROR]\n${msg}\n${src}:${line}\n${err?.stack || ''}</pre>`
 }
 window.addEventListener('unhandledrejection', e => {
-  document.body.style.background = '#0a0a23'
-  document.body.innerHTML = `<pre style="color:#ffadad;font-family:monospace;padding:24px;white-space:pre-wrap">[ERROR]\n${e.reason}</pre>`
+  document.body.style.cssText = 'background:var(--bg-deep);color:var(--accent-red);font-family:monospace;padding:24px'
+  document.body.innerHTML = `<pre style="white-space:pre-wrap;color:inherit;font-family:inherit">[ERROR]\n${e.reason}</pre>`
 })
 
 const screenMenu    = document.getElementById('screen-menu')

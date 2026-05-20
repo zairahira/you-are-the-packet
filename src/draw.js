@@ -1,20 +1,93 @@
 import { PACKET_SIZE } from './constants.js'
 
-const NODE_COLORS = {
-  spawn:           '#acd157',
-  router:          '#99c9ff',
-  firewall:        '#ffadad',
-  'dns-resolver':  '#dbb8ff',
-  'nat-gateway':   '#f1be32',
-  'tcp-node':      '#99c9ff',
-  'dhcp-server':   '#f1be32',
-  'tls-node':      '#dbb8ff',
-  'http-node':     '#acd157',
-  'session-gate':  '#dbb8ff',
-  'as-node':       '#99c9ff',
-  'rate-limit':    '#ffadad',
-  exit:            '#4a4a6a',
-  destination:     '#acd157',
+const DARK_THEME = {
+  canvasBg:         '#0a0a23',
+  gridBg:           '#1b1b32',
+  gridLine:         'rgba(59,59,79,0.3)',
+  edgeDefault:      '#4a4a6a',
+  edgeVisited:      'rgba(172,209,87,0.65)',
+  edgeUnstableRgb:  '255,173,173',
+  nodeFill:         '#2a2a40',
+  ifaceBg:          '#0a0a23',
+  ifaceText:        '#858591',
+  nodeLabel:        '#858591',
+  labelBg:          'rgba(27,27,50,0.85)',
+  labelText:        '#f5f6f7',
+  packetColor:      '#dbb8ff',
+  packetOutline:    '#ffffff',
+  infoBadgeFill:    '#1b1b32',
+  infoBadgeBorder:  '#dbb8ff',
+  infoBadgeText:    '#dbb8ff',
+  nodeColors: {
+    spawn:           '#acd157',
+    router:          '#99c9ff',
+    firewall:        '#ffadad',
+    'dns-resolver':  '#dbb8ff',
+    'nat-gateway':   '#f1be32',
+    'tcp-node':      '#99c9ff',
+    'dhcp-server':   '#f1be32',
+    'tls-node':      '#dbb8ff',
+    'http-node':     '#acd157',
+    'session-gate':  '#dbb8ff',
+    'as-node':       '#99c9ff',
+    'rate-limit':    '#ffadad',
+    exit:            '#4a4a6a',
+    destination:     '#acd157',
+  },
+  labelColors: {
+    'ip-label':      '#99c9ff',
+    'cidr-label':    '#f1be32',
+    'port-label':    '#ffadad',
+    'routing-entry': '#d0d0d5',
+    'rule-text':     '#ffadad',
+  },
+}
+
+const LIGHT_THEME = {
+  canvasBg:         '#f5f6f7',
+  gridBg:           '#e8e8ed',
+  gridLine:         'rgba(192,192,204,0.4)',
+  edgeDefault:      '#c0c0cc',
+  edgeVisited:      'rgba(0,71,27,0.55)',
+  edgeUnstableRgb:  '133,0,0',
+  nodeFill:         '#ffffff',
+  ifaceBg:          '#f5f6f7',
+  ifaceText:        '#3b3b4f',
+  nodeLabel:        '#6b6b80',
+  labelBg:          'rgba(232,232,237,0.95)',
+  labelText:        '#1b1b32',
+  packetColor:      '#5a01a7',
+  packetOutline:    '#0a0a23',
+  infoBadgeFill:    '#ffffff',
+  infoBadgeBorder:  '#5a01a7',
+  infoBadgeText:    '#5a01a7',
+  nodeColors: {
+    spawn:           '#00471b',
+    router:          '#002ead',
+    firewall:        '#850000',
+    'dns-resolver':  '#5a01a7',
+    'nat-gateway':   '#4d3800',
+    'tcp-node':      '#002ead',
+    'dhcp-server':   '#4d3800',
+    'tls-node':      '#5a01a7',
+    'http-node':     '#00471b',
+    'session-gate':  '#5a01a7',
+    'as-node':       '#002ead',
+    'rate-limit':    '#850000',
+    exit:            '#6b6b80',
+    destination:     '#00471b',
+  },
+  labelColors: {
+    'ip-label':      '#002ead',
+    'cidr-label':    '#4d3800',
+    'port-label':    '#850000',
+    'routing-entry': '#3b3b4f',
+    'rule-text':     '#850000',
+  },
+}
+
+function getThemeColors() {
+  return document.documentElement.dataset.theme === 'light' ? LIGHT_THEME : DARK_THEME
 }
 
 const NODE_ICONS = {
@@ -34,14 +107,6 @@ const NODE_ICONS = {
   destination:     'SRV',
 }
 
-const LABEL_COLORS = {
-  'ip-label':      '#99c9ff',
-  'cidr-label':    '#f1be32',
-  'port-label':    '#ffadad',
-  'routing-entry': '#d0d0d5',
-  'rule-text':     '#ffadad',
-}
-
 const MONO = "'Fira Mono', Consolas, 'Courier New', monospace"
 
 export function setupCanvas(canvas) {
@@ -56,7 +121,9 @@ export function setupCanvas(canvas) {
 }
 
 export function drawWorld(ctx, w, h, levelData, levelState, packet, visitedEdges) {
-  ctx.fillStyle = '#0a0a23'
+  const T = getThemeColors()
+
+  ctx.fillStyle = T.canvasBg
   ctx.fillRect(0, 0, w, h)
 
   const ts = levelData.tileSize
@@ -65,11 +132,10 @@ export function drawWorld(ctx, w, h, levelData, levelState, packet, visitedEdges
   const gw = levelData.gridWidth  * ts
   const gh = levelData.gridHeight * ts
 
-  // Grid background
-  ctx.fillStyle = '#1b1b32'
+  ctx.fillStyle = T.gridBg
   ctx.fillRect(ox, oy, gw, gh)
 
-  ctx.strokeStyle = 'rgba(59,59,79,0.3)'
+  ctx.strokeStyle = T.gridLine
   ctx.lineWidth = 1
   for (let c = 0; c <= levelData.gridWidth; c++) {
     ctx.beginPath()
@@ -84,14 +150,13 @@ export function drawWorld(ctx, w, h, levelData, levelState, packet, visitedEdges
     ctx.stroke()
   }
 
-  _drawEdges(ctx, levelData, levelState, visitedEdges)
-  _drawNodes(ctx, levelData, levelState)
-  _drawLabels(ctx, levelData, levelState)
-  _drawPacket(ctx, packet)
+  _drawEdges(ctx, levelData, levelState, visitedEdges, T)
+  _drawNodes(ctx, levelData, levelState, T)
+  _drawLabels(ctx, levelData, levelState, T)
+  _drawPacket(ctx, packet, T)
 }
 
-function _drawEdges(ctx, levelData, levelState, visitedEdges) {
-  // Build map: nodeId -> (nextHopId -> interfaceName) from routing tables
+function _drawEdges(ctx, levelData, levelState, visitedEdges, T) {
   const ifaceMap = new Map()
   ;(levelData.nodes || []).forEach(node => {
     if (node.routingTable?.length) {
@@ -112,11 +177,11 @@ function _drawEdges(ctx, levelData, levelState, visitedEdges) {
 
     if (unstable) {
       const alpha = (0.4 + 0.3 * Math.sin(Date.now() / 350)).toFixed(2)
-      ctx.strokeStyle = `rgba(255,173,173,${alpha})`
+      ctx.strokeStyle = `rgba(${T.edgeUnstableRgb},${alpha})`
     } else if (visited) {
-      ctx.strokeStyle = 'rgba(172, 209, 87, 0.65)'
+      ctx.strokeStyle = T.edgeVisited
     } else {
-      ctx.strokeStyle = '#4a4a6a'
+      ctx.strokeStyle = T.edgeDefault
     }
     ctx.lineWidth = visited ? 4 : 3
     ctx.beginPath()
@@ -124,10 +189,8 @@ function _drawEdges(ctx, levelData, levelState, visitedEdges) {
     ctx.lineTo(b.x, b.y)
     ctx.stroke()
 
-    // Draw interface label where the edge leaves the router
     const iface = ifaceMap.get(edge.from)?.get(edge.to)
     if (iface) {
-      // Fixed pixel distance from router center: past the circle (r≈21) + node label below (~17px)
       const nodeR = Math.floor(levelData.tileSize * 0.33)
       const dx = b.x - a.x
       const dy = b.y - a.y
@@ -141,10 +204,10 @@ function _drawEdges(ctx, levelData, levelState, visitedEdges) {
       const ph = 15
       const px = 5
 
-      ctx.fillStyle = '#0a0a23'
+      ctx.fillStyle = T.ifaceBg
       ctx.fillRect(tx - tw / 2 - px, ty - ph / 2, tw + px * 2, ph)
 
-      ctx.fillStyle    = '#858591'
+      ctx.fillStyle    = T.ifaceText
       ctx.textAlign    = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(iface, tx, ty)
@@ -152,7 +215,7 @@ function _drawEdges(ctx, levelData, levelState, visitedEdges) {
   })
 }
 
-function _drawNodes(ctx, levelData, levelState) {
+function _drawNodes(ctx, levelData, levelState, T) {
   const ts = levelData.tileSize
   const r  = Math.floor(ts * 0.33)
 
@@ -160,24 +223,21 @@ function _drawNodes(ctx, levelData, levelState) {
     const pos = levelState.getNodeWorldPos(node.id)
     if (!pos) return
     const { x, y } = pos
-    const color = NODE_COLORS[node.type] || '#858591'
+    const color = T.nodeColors[node.type] || T.nodeLabel
 
-    // Glow ring
     ctx.beginPath()
     ctx.arc(x, y, r + 6, 0, Math.PI * 2)
     ctx.fillStyle = color + '26'
     ctx.fill()
 
-    // Body circle
     ctx.beginPath()
     ctx.arc(x, y, r, 0, Math.PI * 2)
-    ctx.fillStyle = '#2a2a40'
+    ctx.fillStyle = T.nodeFill
     ctx.fill()
     ctx.strokeStyle = color
     ctx.lineWidth = 2
     ctx.stroke()
 
-    // Icon text
     const icon     = NODE_ICONS[node.type] || '?'
     const fontSize = icon.length > 2 ? 11 : icon.length > 1 ? 13 : 15
     ctx.font        = `bold ${fontSize}px ${MONO}`
@@ -186,19 +246,18 @@ function _drawNodes(ctx, levelData, levelState) {
     ctx.fillStyle   = color
     ctx.fillText(icon, x, y)
 
-    // Label below
     if (node.label) {
       ctx.font         = `11px ${MONO}`
       ctx.textAlign    = 'center'
       ctx.textBaseline = 'top'
-      ctx.fillStyle    = '#858591'
+      ctx.fillStyle    = T.nodeLabel
       ctx.fillText(node.label, x, y + r + 6)
     }
   })
 }
 
 
-function _drawLabels(ctx, levelData, levelState) {
+function _drawLabels(ctx, levelData, levelState, T) {
   ;(levelData.labels || []).forEach(lbl => {
     const pos = levelState.getNodeWorldPos(lbl.attachToNode)
     if (!pos) return
@@ -210,21 +269,21 @@ function _drawLabels(ctx, levelData, levelState) {
     const ph = 20
     const px = 6
 
-    ctx.fillStyle = 'rgba(27,27,50,0.85)'
+    ctx.fillStyle = T.labelBg
     ctx.fillRect(x - tw / 2 - px, y - ph / 2, tw + px * 2, ph)
 
-    ctx.fillStyle    = LABEL_COLORS[lbl.style] || '#f5f6f7'
+    ctx.fillStyle    = T.labelColors[lbl.style] || T.labelText
     ctx.textAlign    = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(lbl.text, x, y)
   })
 }
 
-function _drawPacket(ctx, packet) {
+function _drawPacket(ctx, packet, T) {
   const { renderX: x, renderY: y, flashState } = packet
   const size = PACKET_SIZE
 
-  let color    = '#dbb8ff'
+  let color    = T.packetColor
   let glowSize = 6
 
   if (flashState) {
@@ -235,16 +294,13 @@ function _drawPacket(ctx, packet) {
     glowSize = 6 + pulse * 6
   }
 
-  // Glow
   ctx.fillStyle = color + '40'
   ctx.fillRect(x - size / 2 - glowSize, y - size / 2 - glowSize, size + glowSize * 2, size + glowSize * 2)
 
-  // Body
   ctx.fillStyle = color
   ctx.fillRect(x - size / 2, y - size / 2, size, size)
 
-  // Outline
-  ctx.strokeStyle = '#ffffff'
+  ctx.strokeStyle = T.packetOutline
   ctx.lineWidth   = 1.5
   ctx.strokeRect(x - size / 2, y - size / 2, size, size)
 }
@@ -257,6 +313,7 @@ export function getInfoBadgeCenter(pos, nodeR) {
 
 export function drawInfoBadges(ctx, levelData, levelState, infoNodes) {
   if (!infoNodes?.size) return
+  const T     = getThemeColors()
   const ts    = levelData.tileSize
   const nodeR = Math.floor(ts * 0.33)
 
@@ -267,14 +324,14 @@ export function drawInfoBadges(ctx, levelData, levelState, infoNodes) {
 
     ctx.beginPath()
     ctx.arc(bx, by, INFO_BADGE_R, 0, Math.PI * 2)
-    ctx.fillStyle = '#1b1b32'
+    ctx.fillStyle = T.infoBadgeFill
     ctx.fill()
-    ctx.strokeStyle = '#dbb8ff'
+    ctx.strokeStyle = T.infoBadgeBorder
     ctx.lineWidth = 1.5
     ctx.stroke()
 
     ctx.font             = `bold 11px ${MONO}`
-    ctx.fillStyle        = '#dbb8ff'
+    ctx.fillStyle        = T.infoBadgeText
     ctx.textAlign        = 'center'
     ctx.textBaseline     = 'middle'
     ctx.fillText('i', bx, by + 0.5)
