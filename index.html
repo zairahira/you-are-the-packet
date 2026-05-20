@@ -990,6 +990,17 @@
     @media (prefers-reduced-motion: reduce) {
       .l-content { transition: none; opacity: 1; transform: none; }
     }
+  #donate-link {
+    color: #4a4a6a;
+    font-size: 0.9rem;
+    text-decoration: none;
+    flex: 0 0 auto;
+    margin-left: 8px;
+    transition: color 0.2s;
+    line-height: 1;
+  }
+  #donate-link:hover { color: #858591; }
+
   </style>
 </head>
 <body>
@@ -1063,6 +1074,7 @@
       <span id="hud-dest"></span>
       <span id="hud-port"></span>
       <button id="btn-menu">Go to Main Menu</button>
+      <a id="donate-link" href="https://www.freecodecamp.org/donate" target="_blank" rel="noopener" title="Support freeCodeCamp">&#9829;</a>
     </div>
     <div id="game-body">
       <div id="theory-panel"></div>
