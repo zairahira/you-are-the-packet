@@ -248,3 +248,35 @@ function _drawPacket(ctx, packet) {
   ctx.lineWidth   = 1.5
   ctx.strokeRect(x - size / 2, y - size / 2, size, size)
 }
+
+export const INFO_BADGE_R = 9
+
+export function getInfoBadgeCenter(pos, nodeR) {
+  return { x: pos.x + nodeR + 6, y: pos.y - nodeR - 4 }
+}
+
+export function drawInfoBadges(ctx, levelData, levelState, infoNodes) {
+  if (!infoNodes?.size) return
+  const ts    = levelData.tileSize
+  const nodeR = Math.floor(ts * 0.33)
+
+  infoNodes.forEach((_, nodeId) => {
+    const pos = levelState.getNodeWorldPos(nodeId)
+    if (!pos) return
+    const { x: bx, y: by } = getInfoBadgeCenter(pos, nodeR)
+
+    ctx.beginPath()
+    ctx.arc(bx, by, INFO_BADGE_R, 0, Math.PI * 2)
+    ctx.fillStyle = '#1b1b32'
+    ctx.fill()
+    ctx.strokeStyle = '#dbb8ff'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+
+    ctx.font             = `bold 11px ${MONO}`
+    ctx.fillStyle        = '#dbb8ff'
+    ctx.textAlign        = 'center'
+    ctx.textBaseline     = 'middle'
+    ctx.fillText('i', bx, by + 0.5)
+  })
+}

@@ -5,7 +5,7 @@ import FirewallChecker     from '../systems/FirewallChecker.js'
 import CheckpointSystem    from '../systems/CheckpointSystem.js'
 import TermTracker         from '../systems/TermTracker.js'
 import Packet              from '../entities/Packet.js'
-import { setupCanvas, drawWorld } from '../draw.js'
+import { setupCanvas, drawWorld, drawInfoBadges, getInfoBadgeCenter, INFO_BADGE_R } from '../draw.js'
 import HUD                 from '../ui/hud.js'
 import Callout             from '../ui/callout.js'
 import TheoryPanel         from '../ui/TheoryPanel.js'
@@ -28,6 +28,7 @@ let _onExit        = null
 let _replayStepIndex = 0
 let _replayMoving    = false
 let _visitedEdges  = new Set()
+let _infoNodes     = new Map()
 
 export function initGame(onExit) {
   _canvas        = document.getElementById('game-canvas')
@@ -57,6 +58,8 @@ export function initGame(onExit) {
   if (menuBtn) {
     menuBtn.addEventListener('click', () => { stopGame(); _onExit?.() })
   }
+
+  _canvas.addEventListener('click', _onInfoBadgeClick)
 }
 
 export function startLevel(levelId, skipBriefing = false) {
@@ -141,6 +144,7 @@ function _teardown() {
   document.removeEventListener('keydown', _onKey)
   document.removeEventListener('keydown', _replayKeyHandler)
   _hideModal()
+  _infoNodes.clear()
 }
 
 function _tick(now) {
@@ -152,6 +156,7 @@ function _tick(now) {
 
   _packet.update(dt)
   drawWorld(_ctx, _canvasW, _canvasH, _levelData, _levelState, _packet, _visitedEdges)
+  drawInfoBadges(_ctx, _levelData, _levelState, _infoNodes)
 
   _rafId = requestAnimationFrame(_tick)
 }
@@ -413,14 +418,28 @@ function _tlsPreviousStep(tlsStep) {
 
 function _firePendingIntros(node) {
   const intros = _levelData.termIntroductions?.filter(t => t.triggerNode === node.id) || []
-  intros.forEach(term => {
-    if (!_termTracker.seen(term.termKey)) {
+  const firstUnseen = intros.find(t => !_termTracker.seen(t.termKey))
+  if (firstUnseen) _infoNodes.set(node.id, firstUnseen)
+}
+
+function _onInfoBadgeClick(e) {
+  if (!_levelData || !_levelState || !_infoNodes.size) return
+  const rect  = _canvas.getBoundingClientRect()
+  const cx    = e.clientX - rect.left
+  const cy    = e.clientY - rect.top
+  const nodeR = Math.floor(_levelData.tileSize * 0.33)
+
+  for (const [nodeId, term] of _infoNodes) {
+    const pos = _levelState.getNodeWorldPos(nodeId)
+    if (!pos) continue
+    const { x: bx, y: by } = getInfoBadgeCenter(pos, nodeR)
+    if (Math.sqrt((cx - bx) ** 2 + (cy - by) ** 2) <= INFO_BADGE_R + 4) {
       _termTracker.markSeen(term.termKey)
-      const worldPos    = _levelState.getNodeWorldPos(node.id)
-      const canvasRect  = _canvas.getBoundingClientRect()
-      _callout.show(term, canvasRect, worldPos)
+      _infoNodes.delete(nodeId)
+      _callout.show(term, rect, pos)
+      break
     }
-  })
+  }
 }
 
 function _onLevelComplete() {
